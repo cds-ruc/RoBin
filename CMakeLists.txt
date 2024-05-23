@@ -1,4 +1,6 @@
 cmake_minimum_required (VERSION 3.14)
+set(CMAKE_C_COMPILER "/usr/bin/gcc")
+set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 project (GRE)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
@@ -24,8 +26,8 @@ include_directories(SYSTEM src/competitor/hot/src/libs/idx/content-helpers/inclu
 add_compile_options(-faligned-new -march=native -g -O3)
 
 # add_subdirectory(src/competitor/wormhole)
-add_subdirectory(src/competitor/wormhole_u64)
-add_subdirectory(src/competitor/masstree)
+# add_subdirectory(src/competitor/wormhole_u64)
+# add_subdirectory(src/competitor/masstree)
 
 # microbench
 add_executable(microbench
@@ -35,8 +37,8 @@ add_executable(microbench
 target_link_libraries(microbench
         PRIVATE
         # WORMHOLE
-        WORMHOLEU64
-        MASSTREE
+        # WORMHOLEU64
+        # MASSTREE
 )
 
 target_link_libraries(microbench PUBLIC OpenMP::OpenMP_CXX ${JEMALLOC_LIBRARIES} ${MKL_LIBRARIES} ${TBB_LIBRARIES})

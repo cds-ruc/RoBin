@@ -57,12 +57,23 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-inline void memory_fence() { asm volatile("mfence" : : : "memory"); }
+#ifndef MEMORY_FENCE
+#define MEMORY_FENCE
+/** @brief Full memory fence. */
+inline void memory_fence() {
+    asm volatile("mfence" : : : "memory");
+}
+#endif
 
 /** @brief Compiler fence.
  * Prevents reordering of loads and stores by the compiler. Not intended to
  * synchronize the processor's caches. */
-inline void fence() { asm volatile("" : : : "memory"); }
+#ifndef FENCE
+#define FENCE
+inline void fence() {
+    asm volatile("" : : : "memory");
+}
+#endif
 
 inline uint64_t cmpxchg(uint64_t *object, uint64_t expected,
                                uint64_t desired) {

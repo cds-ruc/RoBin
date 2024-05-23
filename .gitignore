@@ -1,3 +1,4 @@
+datasets/*
 .vscode
 build
 build/*
