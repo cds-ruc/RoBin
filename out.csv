@@ -1,0 +1,9 @@
+id,read_ratio,insert_ratio,update_ratio,scan_ratio,delete_ratio,key_path,index_type,throughput,init_table_size,memory_consumption,thread_num,min,50 percentile,90 percentile,99 percentile,99.9 percentile,99.99 percentile,max,avg,seed,scan_num,latency_variance,latency_sample,data_shift,pgm,error_bound,table_size
+20240523184917,0,1,0,0,0,datasets/covid,btreeolc,1419281,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185208,1,0,0,0,0,datasets/covid,btreeolc,1172620,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185255,0,1,0,0,0,datasets/covid,artolc,2700110,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185431,1,0,0,0,0,datasets/covid,artolc,2079532,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185546,0,1,0,0,0,datasets/covid,alex,2438488,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185614,1,0,0,0,0,datasets/covid,alex,7129204,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185748,0,1,0,0,0,datasets/covid,lipp,1169002,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
+20240523185919,1,0,0,0,0,datasets/covid,lipp,2195477,100000000,0,1,0,0,0,0,0,0,0,0,1866,100,0,0,0,0,64,200000000,1
