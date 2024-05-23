@@ -8,7 +8,7 @@
 #include<cstdio>
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class HotInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class HotInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
   HotInterface() {
     idx = new hot::singlethreaded::HOTSingleThreaded < std::pair < KEY_TYPE, PAYLOAD_TYPE > *,

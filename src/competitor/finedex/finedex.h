@@ -3,7 +3,7 @@
 #include"../indexInterface.h"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class finedexInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class finedexInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
   void init(Param *param = nullptr) {}
 

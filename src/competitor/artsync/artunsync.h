@@ -6,7 +6,7 @@
 #include "tbb/enumerable_thread_specific.h"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class ARTUnsynchronizedInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class ARTUnsynchronizedInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
 
     ARTUnsynchronizedInterface() {

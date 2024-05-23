@@ -5,7 +5,7 @@
 #include "omp.h"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class WormholeU64Interface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class WormholeU64Interface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
 
     WormholeU64Interface() {

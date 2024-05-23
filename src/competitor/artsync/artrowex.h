@@ -5,7 +5,7 @@
 #include <utility>
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class ARTROWEXInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class ARTROWEXInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
 
     ARTROWEXInterface() {

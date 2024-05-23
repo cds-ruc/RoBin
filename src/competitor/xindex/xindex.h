@@ -58,7 +58,7 @@ namespace xindex {
 }
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class xindexInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class xindexInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
     void bulk_load(std::pair <KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param);
 

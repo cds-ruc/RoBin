@@ -4,7 +4,7 @@
 int counter = 0;
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class alexolInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class alexolInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
     void init(Param *param = nullptr) {}
 

@@ -2,7 +2,7 @@
 #include"../indexInterface.h"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class alexInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class alexInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
   void init(Param *param = nullptr) {}
 

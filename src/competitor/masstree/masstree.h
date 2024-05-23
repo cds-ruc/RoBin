@@ -3,7 +3,7 @@
 #include"../indexInterface.h"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class MasstreeInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class MasstreeInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
   typedef mt_index<Masstree::default_table> MapType;
 

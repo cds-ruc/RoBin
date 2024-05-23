@@ -8,7 +8,7 @@
 #include<cstdio>
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class HotRowexInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class HotRowexInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
   HotRowexInterface() {
     idx = new hot::rowex::HOTRowex < std::pair < KEY_TYPE, PAYLOAD_TYPE > *,

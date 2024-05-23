@@ -2,7 +2,7 @@
 #include"../indexInterface.h"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class LIPPInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class LIPPInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
     void init(Param *param = nullptr) {}
 

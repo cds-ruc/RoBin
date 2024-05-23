@@ -5,7 +5,7 @@
 #include <utility>
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
-class ARTOLCInterface : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class ARTOLCInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
 
     ARTOLCInterface() {
