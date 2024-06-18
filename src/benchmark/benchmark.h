@@ -779,7 +779,8 @@ public:
     }
     delete[] sample_ptr;
   }
-  // bulk 0, sorted append all, random point
+
+  // bulk 0, random append all, random point
   void generate_dataset_case99999() {
     // step 1 init_keys, init_key_values
     INVARIANT(init_table_ratio == 0);
@@ -793,6 +794,7 @@ public:
     for (size_t i = 0; i < table_size; ++i) {
       operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
     }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
 
     backup_operations_num = table_size;
     backup_operations.reserve(backup_operations_num);
@@ -812,7 +814,7 @@ public:
     delete[] sample_ptr;
   }
 
-  // bulk 0, random append all, random point
+  // bulk 0, sorted append all, random point
   void generate_dataset_case999999() {
     // step 1 init_keys, init_key_values
     INVARIANT(init_table_ratio == 0);
@@ -826,7 +828,6 @@ public:
     for (size_t i = 0; i < table_size; ++i) {
       operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
     }
-    std::shuffle(operations.begin(), operations.end(), gen); // random insert
 
     backup_operations_num = table_size;
     backup_operations.reserve(backup_operations_num);
