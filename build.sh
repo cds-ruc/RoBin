@@ -1,4 +1,5 @@
 apt install -y libtbb-dev libjemalloc-dev libboost-dev
+git submodule update --init --recursive
 rm -rf build
 mkdir -p build
 cd build

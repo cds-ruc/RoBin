@@ -4,6 +4,7 @@ build
 build/*
 resources
 resources/*
+out.csv
 # result
 # result/*
 
