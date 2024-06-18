@@ -547,7 +547,7 @@ namespace pgmMetric {
     uint64_t min_key = 0;
     uint64_t max_key = std::numeric_limits<uint64_t>::max();
     std::normal_distribution<> error{mean,sqrt(variance)};
-    std::uniform_int_distribution<int> int_gen();
+    std::uniform_int_distribution<int> int_gen{};
 
 
     for (int i = 0; i < model_num; i++) {

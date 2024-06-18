@@ -7,8 +7,8 @@
 --operations_num=200000000 \
 --table_size=-1 \
 --init_table_ratio=1.0 \
---thread_num=32 \
---index=btreeolc
+--thread_num=1 \
+--index=btree
 
 # main test without latency measurement
 ./build/microbench \
