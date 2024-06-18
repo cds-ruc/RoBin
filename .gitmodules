@@ -1,0 +1,20 @@
+[submodule "src/competitor/btree/src"]
+	path = src/competitor/btree/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = btree
+[submodule "src/competitor/pgm/src"]
+	path = src/competitor/pgm/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = pgm
+[submodule "src/competitor/alex/src"]
+	path = src/competitor/alex/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = alex
+[submodule "src/competitor/art/src"]
+	path = src/competitor/art/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = art
+[submodule "src/competitor/lipp/src"]
+	path = src/competitor/lipp/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = lipp
