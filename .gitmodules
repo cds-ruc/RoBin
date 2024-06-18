@@ -10,11 +10,15 @@
 	path = src/competitor/alex/src
 	url = https://github.com/jscblack/index_repos.git
 	branch = alex
-[submodule "src/competitor/art/src"]
-	path = src/competitor/art/src
-	url = https://github.com/jscblack/index_repos.git
-	branch = art
 [submodule "src/competitor/lipp/src"]
 	path = src/competitor/lipp/src
 	url = https://github.com/jscblack/index_repos.git
 	branch = lipp
+[submodule "src/competitor/art/src"]
+	path = src/competitor/art/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = art
+[submodule "src/competitor/dytis/src"]
+	path = src/competitor/dytis/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = dytis
