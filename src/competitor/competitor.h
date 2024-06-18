@@ -3,7 +3,7 @@
 #include "./alexol/alex.h"
 // #include "./artsync/artrowex.h"
 #include "./artsync/artolc.h"
-// #include "./artsync/artunsync.h"
+#include "./artsync/artunsync.h"
 // #include "./xindex/xindex.h"
 #include "./btreeolc/btreeolc.h"
 // #include "./hot/hot.h"
@@ -16,6 +16,9 @@
 // #include "wormhole_u64/wormhole_u64.h"
 // #include "masstree/masstree.h"
 // #include "finedex/finedex.h"
+#include "./dytis/dytis.h"
+#include "./dili/dili.h"
+// #include "./bptree/bptree.h"
 #include "iostream"
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
@@ -60,9 +63,9 @@ indexInterface<KEY_TYPE, PAYLOAD_TYPE> *get_index(std::string index_type) {
   // else if (index_type == "artrowex") {
   //   index = new ARTROWEXInterface<KEY_TYPE, PAYLOAD_TYPE>;
   // }
-  // else if (index_type == "artunsync") {
-  //   index = new ARTUnsynchronizedInterface<KEY_TYPE, PAYLOAD_TYPE>;
-  // }
+  else if (index_type == "artunsync") {
+    index = new ARTUnsynchronizedInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  }
   else if (index_type == "lippol") {
     index = new LIPPOLInterface<KEY_TYPE, PAYLOAD_TYPE>;
   }
@@ -72,6 +75,15 @@ indexInterface<KEY_TYPE, PAYLOAD_TYPE> *get_index(std::string index_type) {
   // else if (index_type == "finedex") {
   //   index = new finedexInterface<KEY_TYPE, PAYLOAD_TYPE>;
   // }
+  else if (index_type == "dytis") {
+    index = new dytisInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  }
+  // else if (index_type == "bptree") {
+  //   index = new BPTreeInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  // }
+  else if (index_type == "dili") {
+    index = new diliInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  }
   else {
     std::cout << "Could not find a matching index called " << index_type << ".\n";
     exit(0);

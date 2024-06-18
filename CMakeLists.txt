@@ -15,13 +15,16 @@ find_package(TBB REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include_directories(${MKL_INCLUDE_DIRS})
+# include_directories(${MKL_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${JEMALLOC_INCLUDE_DIR})
 include_directories(SYSTEM src/competitor/hot/src/libs/hot/commons/include)
 include_directories(SYSTEM src/competitor/hot/src/libs/hot/rowex/include)
 include_directories(SYSTEM src/competitor/hot/src/libs/hot/single-threaded/include)
 include_directories(SYSTEM src/competitor/hot/src/libs/idx/content-helpers/include)
+include_directories(SYSTEM src/competitor/dytis/src/util)
+# include_directories(SYSTEM src/competitor/bptree/src/btree_tests/ParallelTools)
+# include_directories(SYSTEM src/competitor/bptree/src/tlx-leafds)
 
 add_compile_options(-faligned-new -march=native -g -O3)
 

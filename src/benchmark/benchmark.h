@@ -1,20 +1,3 @@
-#include <algorithm>
-#include <atomic>
-#include <cassert>
-#include <ctime>
-#include <fstream>
-#include <getopt.h>
-#include <iostream>
-#include <memory>
-#include <random>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <sys/types.h>
-#include <thread>
-#include <unistd.h>
-#include <vector>
-
 #include "../competitor/competitor.h"
 #include "../competitor/indexInterface.h"
 #include "../tscns.h"
@@ -23,7 +6,26 @@
 #include "pgm_metric.h"
 #include "tbb/parallel_sort.h"
 #include "utils.h"
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
+#include <getopt.h>
+#include <iostream>
 #include <jemalloc/jemalloc.h>
+#include <memory>
+#include <random>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <sys/types.h>
+#include <thread>
+#include <unistd.h>
+#include <unordered_set>
+#include <vector>
 
 template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   typedef indexInterface<KEY_TYPE, PAYLOAD_TYPE> index_t;
@@ -58,6 +60,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   bool dataset_statistic;
   bool data_shift = false;
   int test_suite = 0;
+  bool dump_bulkload = false;
 
   std::vector<KEY_TYPE> init_keys;
   KEY_TYPE *keys;
@@ -117,6 +120,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
 public:
   size_t backup_operations_num;
   std::vector<std::pair<Operation, KEY_TYPE>> backup_operations;
+  int64_t bulkload_duration;
   void run_custom_suite() {
     assert(test_suite);
     load_keys_inner();
@@ -202,12 +206,34 @@ public:
       break;
     };
     case 4: {
+      generate_dataset_case4();
       break;
     };
     case 5: {
       break;
     };
     case 6: {
+      generate_dataset_case6();
+      break;
+    };
+    case 7: {
+      generate_dataset_case7();
+      break;
+    };
+    case 8: {
+      generate_dataset_case8();
+      break;
+    };
+    case 99: {
+      generate_dataset_case99();
+      break;
+    };
+    case 999: {
+      generate_dataset_case999();
+      break;
+    };
+    case 9999: {
+      generate_dataset_case9999();
       break;
     };
     default:
@@ -368,8 +394,385 @@ public:
     }
     delete[] sample_ptr;
   }
+  // ramdom substring + sampling
+  void generate_dataset_case4() {
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    double seq_ratio = 0.8;
+    size_t seq_init_size = init_table_size * seq_ratio;
+    double sampling_ratio = 1.0 - seq_ratio;
+    size_t sampling_size = init_table_size * sampling_ratio;
+    double sigma_ratio = 0.5;
+    std::normal_distribution<long double> normal_dis(
+        (table_size - seq_init_size) / 2, sampling_size * sigma_ratio);
+    std::unordered_set<uint64_t> s;
+    size_t start_pos = gen() % (table_size - size_t(seq_init_size));
+    for (size_t i = start_pos; i < start_pos + seq_init_size; ++i) {
+      s.insert(i + 1);
+    }
+    // [0,start_pos), [start_pos, start_pos+seq_init_size), [start_pos +
+    // seq_init_size, table_size)
+    while (s.size() < init_table_size) {
+      uint64_t x = round(normal_dis(gen));
+      if (x > 0 && x < table_size - seq_init_size) {
+        if (x > start_pos) {
+          x += seq_init_size;
+        }
+        s.insert(x);
+      }
+    }
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = keys[x - 1];
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+    COUT_VAR(s.size());
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i + 1) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+      }
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
 
+  // normal sampling
+  void generate_dataset_case6() {
+    /* TODO:
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    double sigma_ratio = 0.5;
+    std::normal_distribution<long double> normal_dis(
+        table_size / 2, init_table_size * sigma_ratio);
+    std::unordered_set<uint64_t> s;
+    while (s.size() < init_table_size) {
+      uint64_t x = round(normal_dis(gen));
+      if (x > 0 && x <= table_size) {
+        s.insert(x);
+      }
+    }
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = keys[x - 1];
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+    COUT_VAR(s.size());
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i + 1) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+      }
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+    */
+  }
+  // sorted append
+  void generate_dataset_case7() {
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 随机选取一个位置，然后取init_table_size个key
+    size_t start_pos = gen() % (table_size - init_table_size);
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
 
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < start_pos; ++i) {
+      operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+    }
+    for (size_t i = start_pos + init_table_size; i < table_size; ++i) {
+      operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+    }
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+  // sorted append
+  void generate_dataset_case8() {
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size-1个key
+    // 最后一个元素固定添加到init_keys里面
+    size_t start_pos = 0;
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size - 1; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+    }
+    init_keys[init_table_size - 1] = keys[table_size - 1];
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = init_table_size - 1; i < table_size - 1; ++i) {
+      operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+    }
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+
+  // random bulkload, random insert, random read
+  void generate_dataset_case99() {
+    std::shuffle(keys, keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = init_table_size; i < table_size; ++i) {
+      operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+
+  // the best performance ro test
+  void generate_dataset_case999() {
+    // step 1 init_keys, init_key_values
+    INVARIANT(init_table_ratio == 1.0);
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = init_table_size; i < table_size; ++i) {
+      operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+
+  // random bulkload, sorted insert, random read
+  void generate_dataset_case9999() {
+    std::shuffle(keys, keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = init_table_size; i < table_size; ++i) {
+      operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+    }
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
 
 public:
   Benchmark() {}
@@ -444,11 +847,37 @@ public:
     Param param = Param(thread_num, 0);
     index->init(&param);
 
+    if (dump_bulkload) {
+      // dump the bulkload, with name as
+      // {key}_{test_suite}_{init_table_size}_bulk.dump
+      std::string dataset_name =
+          keys_file_path.substr(keys_file_path.find_last_of("/") + 1);
+      std::string dump_file_name =
+          dataset_name + "_" + std::to_string(test_suite) + "_" +
+          std::to_string(init_table_size) + "_bulk.dump";
+      COUT_THIS("dump bulkload to " << dump_file_name);
+      if (std::filesystem::exists(dump_file_name)) {
+        COUT_THIS("dump file exists, skip dump");
+        goto bulkload;
+      }
+      std::ofstream file(dump_file_name, std::ios::binary | std::ios::out);
+      file.write(reinterpret_cast<const char *>(init_keys.data()),
+                 std::streamsize(init_keys.size() * sizeof(KEY_TYPE)));
+      file.close();
+      return;
+    }
+
+  bulkload:
     // deal with the background thread case
     thread_num = param.worker_num;
 
     COUT_THIS("bulk loading");
+    TSCNS ts;
+    ts.init();
+    auto start_time = ts.rdtsc();
     index->bulk_load(init_key_values, init_keys.size(), &param);
+    auto end_time = ts.rdtsc();
+    bulkload_duration = ts.tsc2ns(end_time) - ts.tsc2ns(start_time);
   }
 
   /*
@@ -501,6 +930,7 @@ public:
     dataset_statistic = get_boolean_flag(flags, "dataset_statistic");
     data_shift = get_boolean_flag(flags, "data_shift");
     test_suite = stoi(get_with_default(flags, "test_suite", "0"));
+    dump_bulkload = get_boolean_flag(flags, "dump_bulkload");
     COUT_THIS("[micro] Read:Insert:Update:Scan:Delete= "
               << read_ratio << ":" << insert_ratio << ":" << update_ratio << ":"
               << scan_ratio << ":" << delete_ratio);
@@ -701,6 +1131,11 @@ public:
   }
 
   void print_stat(bool header = false, bool clear_flag = true) {
+    if (test_suite == 999 && insert_ratio == 1.0 && stat.throughput == 0) {
+      // lookup baseline. calc the bulkload throughput
+      stat.throughput = table_size * 1000000000 / bulkload_duration;
+    }
+
     double avg_latency = 0;
     // average latency
     for (auto t : stat.latency) {
