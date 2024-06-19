@@ -19,11 +19,12 @@ include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${JEMALLOC_INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
 
-add_compile_options(-faligned-new -march=native -g -O3 -fopenmp)
+add_compile_options(${OpenMP_CXX_FLAGS})
+add_compile_options(-faligned-new -march=native -g -O3)
 
 # microbench
 add_executable(microbench
     ${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/microbench.cpp
 )
 
-target_link_libraries(microbench PUBLIC OpenMP::OpenMP_CXX ${JEMALLOC_LIBRARIES} ${TBB_LIBRARIES})
+target_link_libraries(microbench PUBLIC ${OpenMP_CXX_LIBRARIES} ${JEMALLOC_LIBRARIES} ${TBB_LIBRARIES})

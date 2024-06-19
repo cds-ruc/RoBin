@@ -22,3 +22,7 @@
 	path = src/competitor/dytis/src
 	url = https://github.com/jscblack/index_repos.git
 	branch = dytis
+[submodule "src/competitor/dili/src"]
+	path = src/competitor/dili/src
+	url = https://github.com/jscblack/index_repos.git
+	branch = dili

@@ -112,6 +112,37 @@ function AppendTest {
     done
 }
 
+all_datasets=("covid" "libio" "osm" "fb")
+
+function ShiftTest {
+    for bulk_dataset in ${all_datasets[@]}
+    do
+        for insert_dataset in ${all_datasets[@]}
+        do
+            if [ $bulk_dataset == $insert_dataset ]; then
+                continue
+            fi
+            test_suite=10
+            init_table_ratio=0.5
+            for ((i=1; i<=batch; i++))
+            do
+                nice -n -10 ./build/microbench \
+                --keys_file=datasets/$bulk_dataset \
+                --backup_keys_file=datasets/$insert_dataset \
+                --keys_file_type=binary \
+                --read=0.0 --insert=0.0 \
+                --update=0.0 --scan=0.0  --delete=0.0 \
+                --test_suite=$test_suite \
+                --operations_num=0 \
+                --table_size=-1 \
+                --init_table_ratio=$init_table_ratio \
+                --thread_num=1 \
+                --index=alex,lipp
+            done
+        done
+    done
+}
+
 # select test from input
 case $1 in
     BaselineTest)
@@ -126,8 +157,11 @@ case $1 in
     AppendTest)
         AppendTest
         ;;
+    ShiftTest)
+        ShiftTest
+        ;;
     *)
-        echo "Usage: $0 {BaselineTest|SortedBulkTest|SamplingTest|AppendTest}"
+        echo "Usage: $0 {BaselineTest|SortedBulkTest|SamplingTest|AppendTest|ShiftTest}"
         exit 1
 esac
 

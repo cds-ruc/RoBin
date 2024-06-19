@@ -49,6 +49,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   std::vector<std::string> all_thread_num;
   std::string index_type;
   std::string keys_file_path;
+  std::string backup_keys_file_path;
   std::string keys_file_type;
   std::string sample_distribution;
   bool latency_sample = false;
@@ -65,6 +66,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
 
   std::vector<KEY_TYPE> init_keys;
   KEY_TYPE *keys;
+  KEY_TYPE *backup_keys;
   std::pair<KEY_TYPE, PAYLOAD_TYPE> *init_key_values;
   std::vector<std::pair<Operation, KEY_TYPE>> operations;
   std::mt19937 gen;
@@ -124,7 +126,11 @@ public:
   int64_t bulkload_duration;
   void run_custom_suite() {
     assert(test_suite);
-    load_keys_inner();
+    keys = load_keys_inner(keys_file_path);
+    if (test_suite == 10) {
+      INVARIANT(!backup_keys_file_path.empty());
+      backup_keys = load_keys_inner(backup_keys_file_path);
+    }
     generate_dataset_inner();
     for (auto s : all_index_type) {
       for (auto t : all_thread_num) {
@@ -152,22 +158,23 @@ public:
     }
   }
 
-  KEY_TYPE *load_keys_inner() {
+  KEY_TYPE *load_keys_inner(std::string keys_file_path_inner) {
     // Read keys from file
     COUT_THIS("Reading data from file.");
-
+    KEY_TYPE *keys_inner;
     if (table_size > 0)
-      keys = new KEY_TYPE[table_size];
+      keys_inner = new KEY_TYPE[table_size];
 
     if (keys_file_type == "binary") {
-      table_size = load_binary_data(keys, table_size, keys_file_path);
+      table_size =
+          load_binary_data(keys_inner, table_size, keys_file_path_inner);
       if (table_size <= 0) {
         COUT_THIS(
             "Could not open key file, please check the path of key file.");
         exit(0);
       }
     } else if (keys_file_type == "text") {
-      table_size = load_text_data(keys, table_size, keys_file_path);
+      table_size = load_text_data(keys_inner, table_size, keys_file_path_inner);
       if (table_size <= 0) {
         COUT_THIS(
             "Could not open key file, please check the path of key file.");
@@ -178,11 +185,11 @@ public:
       exit(0);
     }
 
-    tbb::parallel_sort(keys, keys + table_size);
-    auto last = std::unique(keys, keys + table_size);
-    table_size = last - keys;
+    tbb::parallel_sort(keys_inner, keys_inner + table_size);
+    auto last = std::unique(keys_inner, keys_inner + table_size);
+    table_size = last - keys_inner;
     COUT_VAR(table_size);
-    return keys;
+    return keys_inner;
   }
   // step1
   // 数据已经在keys里了，有序且去过重了，这一步的目的是生成bulkload的数据
@@ -226,6 +233,10 @@ public:
       generate_dataset_case8();
       break;
     };
+    case 10: {
+      generate_dataset_case10();
+      break;
+    }
     case 99: {
       generate_dataset_case99();
       break;
@@ -633,6 +644,78 @@ public:
     delete[] sample_ptr;
   }
 
+  // for two dataset. one is for bulkload another for insert
+  // shifting workload
+  void generate_dataset_case10() {
+    INVARIANT(keys != nullptr);
+    INVARIANT(backup_keys != nullptr);
+    INVARIANT(init_table_ratio == 0.5);
+    KEY_TYPE *tmp_keys = new KEY_TYPE[table_size];
+    std::unordered_set<KEY_TYPE> s;
+    std::shuffle(keys, keys + table_size, gen);
+    std::shuffle(backup_keys, backup_keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = keys[i];
+      s.insert(keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    memcpy(tmp_keys, keys, init_table_size * sizeof(KEY_TYPE));
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    int tmp_keys_pos = init_table_size;
+    for (size_t i = 0; i < table_size; ++i) {
+      if (!s.count(backup_keys[i])) {
+        operations.push_back(
+            std::pair<Operation, KEY_TYPE>(INSERT, backup_keys[i]));
+        tmp_keys[tmp_keys_pos++] = backup_keys[i];
+        s.insert(backup_keys[i]);
+        if (operations.size() == operations_num) {
+          break;
+        }
+      }
+    }
+    if (operations.size() != operations_num || tmp_keys_pos != table_size) {
+      COUT_N_EXIT(
+          "operations.size() != operations_num || tmp_keys_pos != table_size");
+    }
+    COUT_THIS("pass shifting check");
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    if (sample_distribution == "uniform") {
+      sample_ptr =
+          get_search_keys(&tmp_keys[0], table_size, backup_operations_num,
+                          &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&tmp_keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] tmp_keys;
+    delete[] sample_ptr;
+  }
+
   // random bulkload, random insert, random read
   void generate_dataset_case99() {
     std::shuffle(keys, keys + table_size, gen);
@@ -974,7 +1057,8 @@ public:
    */
   inline void parse_args(int argc, char **argv) {
     auto flags = parse_flags(argc, argv);
-    keys_file_path = get_required(flags, "keys_file"); // required
+    keys_file_path = get_required(flags, "keys_file");               // required
+    backup_keys_file_path = get_required(flags, "backup_keys_file"); // required
     keys_file_type = get_with_default(flags, "keys_file_type", "binary");
     read_ratio = stod(get_required(flags, "read"));              // required
     insert_ratio = stod(get_with_default(flags, "insert", "0")); // required
@@ -1256,6 +1340,8 @@ public:
             << ",";
       ofile << "key_path"
             << ",";
+      ofile << "backup_key_path"
+            << ",";
       ofile << "index_type"
             << ",";
       ofile << "throughput"
@@ -1311,6 +1397,7 @@ public:
           << scan_ratio << "," << delete_ratio << ",";
 
     ofile << keys_file_path << ",";
+    ofile << backup_keys_file_path << ",";
     ofile << index_type << ",";
     ofile << stat.throughput << ",";
     ofile << init_table_size << ",";
