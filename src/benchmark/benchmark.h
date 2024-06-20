@@ -1058,7 +1058,7 @@ public:
   inline void parse_args(int argc, char **argv) {
     auto flags = parse_flags(argc, argv);
     keys_file_path = get_required(flags, "keys_file");               // required
-    backup_keys_file_path = get_required(flags, "backup_keys_file"); // required
+    backup_keys_file_path = get_with_default(flags, "backup_keys_file", ""); // required
     keys_file_type = get_with_default(flags, "keys_file_type", "binary");
     read_ratio = stod(get_required(flags, "read"));              // required
     insert_ratio = stod(get_with_default(flags, "insert", "0")); // required
