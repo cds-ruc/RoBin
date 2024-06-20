@@ -1,6 +1,7 @@
 #!/bin/bash
 
-batch=1
+numanode=1
+batch=3
 
 all_datasets=("covid"  "osm" "fb" "genome" "planet")
 
@@ -16,6 +17,7 @@ function BaselineTest {
             fi
             for ((i=1; i<=batch; i++))
             do
+                numactl --cpunodebind=$numanode --membind=$numanode \
                 nice -n -10 ./build/microbench \
                 --keys_file=datasets/$dataset \
                 --keys_file_type=binary \
@@ -42,6 +44,7 @@ function SortedBulkTest {
             do
                 for ((i=1; i<=batch; i++))
                 do
+                    numactl --cpunodebind=$numanode --membind=$numanode \
                     nice -n -10 ./build/microbench \
                     --keys_file=datasets/$dataset \
                     --keys_file_type=binary \
@@ -68,6 +71,7 @@ function SamplingTest {
             do
                 for ((i=1; i<=batch; i++))
                 do
+                    numactl --cpunodebind=$numanode --membind=$numanode \
                     nice -n -10 ./build/microbench \
                     --keys_file=datasets/$dataset \
                     --keys_file_type=binary \
@@ -95,6 +99,7 @@ function AppendTest {
             do
                 for ((i=1; i<=batch; i++))
                 do
+                    numactl --cpunodebind=$numanode --membind=$numanode \
                     nice -n -10 ./build/microbench \
                     --keys_file=datasets/$dataset \
                     --keys_file_type=binary \
@@ -126,6 +131,7 @@ function ShiftTest {
             init_table_ratio=0.5
             for ((i=1; i<=batch; i++))
             do
+                numactl --cpunodebind=$numanode --membind=$numanode \
                 nice -n -10 ./build/microbench \
                 --keys_file=datasets/$bulk_dataset \
                 --backup_keys_file=datasets/$insert_dataset \
