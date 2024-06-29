@@ -3,7 +3,8 @@
 numanode=1
 batch=3
 
-all_datasets=("osm" "fb" "genome" "planet")
+all_datasets=("covid" "osm" "fb" "genome" "planet" "linear")
+# all_datasets=("linear")
 
 function BaselineTest {
     for dataset in ${all_datasets[@]}
