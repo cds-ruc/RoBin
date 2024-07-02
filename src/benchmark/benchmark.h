@@ -106,7 +106,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   typedef ThreadParam param_t;
 
   // custom test cases.
-  // controled under test_suite flag
+  // controlled under test_suite flag
   // when test_suite is true
   // it will run two tests. first is insert benchmark, second is read benchmark
   /*
@@ -162,7 +162,7 @@ public:
     // Read keys from file
     COUT_THIS("Reading data from file.");
     KEY_TYPE *keys_inner;
-    if (table_size > 0)
+    if (table_size > 0) // FIXME: Duplicated allocation with load_binary_data or load_text_data can cause memory leak. Note that this is GRE's fault, not JSC's.
       keys_inner = new KEY_TYPE[table_size];
 
     if (keys_file_type == "binary") {
@@ -293,7 +293,7 @@ public:
     init_table_size = init_table_ratio * table_size;
     init_keys.resize(init_table_size);
     // 随机选取一个位置，然后取init_table_size个key
-    size_t start_pos = gen() % (table_size - init_table_size);
+    size_t start_pos = gen() % (table_size - init_table_size);        // FIXME: % (table_size - init_table_size + 1)
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
@@ -581,7 +581,7 @@ public:
     init_table_size = init_table_ratio * table_size;
     init_keys.resize(init_table_size);
     // 随机选取一个位置，然后取init_table_size个key
-    size_t start_pos = gen() % (table_size - init_table_size);
+    size_t start_pos = gen() % (table_size - init_table_size);  // FIXME: % (table_size - init_table_size + 1)
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
@@ -743,7 +743,8 @@ public:
     KEY_TYPE *tmp_keys = new KEY_TYPE[table_size];
     std::unordered_set<KEY_TYPE> s;
     std::shuffle(keys, keys + table_size, gen);
-    std::shuffle(backup_keys, backup_keys + table_size, gen);
+    std::shuffle(backup_keys, backup_keys + table_size, gen); // FIXME: need to assert the table size of two datasets are the same
+                                                              // since they use the same variable "table_size" when loading
     // step 1 init_keys, init_key_values
     init_table_size = init_table_ratio * table_size;
     init_keys.resize(init_table_size);
@@ -773,7 +774,7 @@ public:
         operations.push_back(
             std::pair<Operation, KEY_TYPE>(INSERT, backup_keys[i]));
         tmp_keys[tmp_keys_pos++] = backup_keys[i];
-        s.insert(backup_keys[i]);
+        s.insert(backup_keys[i]);     // FIXME: 应该不用再insert到set里面，backup keys已经在load的时候unique了
         if (operations.size() == operations_num) {
           break;
         }
@@ -891,7 +892,7 @@ public:
         operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
       }
     }
-    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert  FIXME: 这里可以不用再sort一遍
 
     // step 3 backup_operations, backup_operations_num
     backup_operations_num = table_size;
@@ -945,7 +946,7 @@ public:
         operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[j]));
       }
     }
-    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert FIXME: tiered insert, no need to sort
     if (operations.size() != operations_num) {
       COUT_N_EXIT("operations.size() != operations_num")
     }
