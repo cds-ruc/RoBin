@@ -8,7 +8,10 @@
 #include "utils.h"
 #include <algorithm>
 #include <atomic>
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <ctime>
 #include <filesystem>
@@ -42,6 +45,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   size_t operations_num;
   long long table_size = -1;
   size_t init_table_size;
+  int sample_round;
   double init_table_ratio;
   double del_table_ratio;
   size_t thread_num = 1;
@@ -63,6 +67,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   int test_suite = 0;
   bool dump_bulkload = false;
   double sigma_ratio = 0.5;
+  double alpha_ratio = 0.5;
 
   std::vector<KEY_TYPE> init_keys;
   KEY_TYPE *keys;
@@ -261,6 +266,30 @@ public:
     }
     case 15: {
       generate_dataset_case15();
+      break;
+    }
+    case 20: {
+      generate_dataset_case20();
+      break;
+    }
+    case 21: {
+      generate_dataset_case21();
+      break;
+    }
+    case 22: {
+      generate_dataset_case22();
+      break;
+    }
+    case 23: {
+      generate_dataset_case23();
+      break;
+    }
+    case 24: {
+      generate_dataset_case24();
+      break;
+    }
+    case 25: {
+      generate_dataset_case25();
       break;
     }
     case 99: {
@@ -709,8 +738,7 @@ public:
         operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
       }
     }
-    tbb::parallel_sort(operations.begin(), operations.end(),
-                       gen); // sorted insert
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert
     if (operations.size() != operations_num) {
       COUT_N_EXIT("operations.size() != operations_num")
     }
@@ -1064,6 +1092,410 @@ public:
     delete[] sample_ptr;
   }
 
+  // sorted / zipf sampling / random point
+  void generate_dataset_case20() {
+    // step 1 init_keys, init_key_values
+    init_keys.resize(table_size); // 临时给大
+    // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
+    // alpha_ratio;
+    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
+    COUT_VAR(zipf_gen.alpha_);
+    for (int i = 0; i < sample_round; i++) {
+      s.insert(zipf_gen.nextValue());
+    }
+    init_table_size = s.size();
+    init_table_ratio = double(init_table_size) / table_size;
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = keys[x];
+    }
+    init_keys.resize(init_table_size);
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+      }
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+  // sorted / zipf sampling / sorted append
+  void generate_dataset_case21() {
+    // step 1 init_keys, init_key_values
+    init_keys.resize(table_size); // 临时给大
+    // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
+    // alpha_ratio;
+    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
+    COUT_VAR(zipf_gen.alpha_);
+    for (int i = 0; i < sample_round; i++) {
+      s.insert(zipf_gen.nextValue());
+    }
+    init_table_size = s.size();
+    init_table_ratio = double(init_table_size) / table_size;
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = keys[x];
+    }
+    init_keys.resize(init_table_size);
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+      }
+    }
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted append
+
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+  // shuffled / zipf sampling / random point
+  void generate_dataset_case22() {
+    std::shuffle(keys, keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_keys.resize(table_size); // 临时给大
+    // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
+    // alpha_ratio;
+    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
+    COUT_VAR(zipf_gen.alpha_);
+    for (int i = 0; i < sample_round; i++) {
+      s.insert(zipf_gen.nextValue());
+    }
+    init_table_size = s.size();
+    init_table_ratio = double(init_table_size) / table_size;
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = keys[x];
+    }
+    init_keys.resize(init_table_size);
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+      }
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+  // shuffled / zipf sampling / sorted append
+  void generate_dataset_case23() {
+    std::shuffle(keys, keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_keys.resize(table_size); // 临时给大
+    // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
+    // alpha_ratio;
+    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
+    COUT_VAR(zipf_gen.alpha_);
+    for (int i = 0; i < sample_round; i++) {
+      s.insert(zipf_gen.nextValue());
+    }
+    init_table_size = s.size();
+    init_table_ratio = double(init_table_size) / table_size;
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = keys[x];
+    }
+    init_keys.resize(init_table_size);
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
+      }
+    }
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted append
+
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+  // middle crossover / zipf sampling / random point
+  void generate_dataset_case24() {
+    // 这里要变成middle crossover的结构
+    KEY_TYPE *mc_keys = new KEY_TYPE[table_size];
+    size_t mi_pos = (table_size - 1) / 2;
+    for (size_t i = 0; i < table_size; i++) {
+      mc_keys[i] = keys[mi_pos];
+      if (i % 2 == 0) {
+        mi_pos += (i + 1);
+      } else {
+        mi_pos -= (i + 1);
+      }
+    }
+    // step 1 init_keys, init_key_values
+    init_keys.resize(table_size); // 临时给大
+    // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
+    // alpha_ratio;
+    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
+    COUT_VAR(zipf_gen.alpha_);
+    for (int i = 0; i < sample_round; i++) {
+      s.insert(zipf_gen.nextValue());
+    }
+    init_table_size = s.size();
+    init_table_ratio = double(init_table_size) / table_size;
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = mc_keys[x];
+    }
+    init_keys.resize(init_table_size);
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, mc_keys[i]));
+      }
+    }
+    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+    delete [] mc_keys;
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+  // middle crossover / zipf sampling / sorted append
+  void generate_dataset_case25() {
+    // 这里要变成middle crossover的结构
+    KEY_TYPE *mc_keys = new KEY_TYPE[table_size];
+    size_t mi_pos = (table_size - 1) / 2;
+    for (size_t i = 0; i < table_size; i++) {
+      mc_keys[i] = keys[mi_pos];
+      if (i % 2 == 0) {
+        mi_pos += (i + 1);
+      } else {
+        mi_pos -= (i + 1);
+      }
+    }
+    // step 1 init_keys, init_key_values
+    init_keys.resize(table_size); // 临时给大
+    // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
+    // alpha_ratio;
+    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
+    COUT_VAR(zipf_gen.alpha_);
+    for (int i = 0; i < sample_round; i++) {
+      s.insert(zipf_gen.nextValue());
+    }
+    init_table_size = s.size();
+    init_table_ratio = double(init_table_size) / table_size;
+    size_t i_pos = 0;
+    for (auto x : s) {
+      init_keys[i_pos++] = mc_keys[x];
+    }
+    init_keys.resize(init_table_size);
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+
+    // step 2 operations, operations_num
+    operations_num = table_size - init_table_size; // insert rest of all
+    operations.reserve(operations_num);
+    for (size_t i = 0; i < table_size; ++i) {
+      if (s.find(i) == s.end()) {
+        operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, mc_keys[i]));
+      }
+    }
+    tbb::parallel_sort(operations.begin(), operations.end()); // random insert
+
+    if (operations.size() != operations_num) {
+      COUT_N_EXIT("operations.size() != operations_num")
+    }
+    COUT_THIS("pass sampling check");
+    delete [] mc_keys;
+
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr = nullptr;
+    std::shuffle(keys, keys + table_size, gen);
+    if (sample_distribution == "uniform") {
+      sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
+                                   &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr = get_search_keys_zipf(&keys[0], table_size,
+                                        backup_operations_num, &random_seed);
+    }
+    for (size_t i = 0; i < backup_operations_num; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr[i]));
+    }
+    delete[] sample_ptr;
+  }
+
   // random bulkload, random insert, random read
   void generate_dataset_case99() {
     std::shuffle(keys, keys + table_size, gen);
@@ -1210,9 +1642,6 @@ public:
     }
     delete[] sample_ptr;
   }
-
-  // sorted / zipf sampling / random point
-  void generate_dataset_case20() {}
 
   // bulk 0, random append all, random point
   void generate_dataset_case99999() {
@@ -1424,6 +1853,7 @@ public:
     init_table_ratio = stod(get_with_default(flags, "init_table_ratio", "0.5"));
     del_table_ratio = stod(get_with_default(flags, "del_table_ratio", "0.5"));
     init_table_size = 0;
+    sample_round = stoi(get_with_default(flags, "sample_round", "50000000"));
     all_thread_num = get_comma_separated(flags, "thread_num"); // required
     all_index_type = get_comma_separated(flags, "index");      // required
     sample_distribution =
@@ -1441,6 +1871,7 @@ public:
     test_suite = stoi(get_with_default(flags, "test_suite", "0"));
     dump_bulkload = get_boolean_flag(flags, "dump_bulkload");
     sigma_ratio = stod(get_with_default(flags, "sigma_ratio", "0.5"));
+    alpha_ratio = stod(get_with_default(flags, "alpha_ratio", "100"));
     COUT_THIS("[micro] Read:Insert:Update:Scan:Delete= "
               << read_ratio << ":" << insert_ratio << ":" << update_ratio << ":"
               << scan_ratio << ":" << delete_ratio);

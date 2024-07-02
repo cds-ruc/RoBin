@@ -16,12 +16,14 @@
 --keys_file_type=binary \
 --read=0.0 --insert=0.0 \
 --update=0.0 --scan=0.0  --delete=0.0 \
---test_suite=99 \
+--test_suite=20 \
 --operations_num=0 \
 --table_size=-1 \
---init_table_ratio=0.05 \
+--init_table_ratio=1.0 \
+--sample_round=200000000 \
+--alpha_ratio=100 \
 --thread_num=1 \
---index=dili
+--index=btree
 
 # main test with latency measurement (as noticed, it will slow down by up to 15% qps)
 ./build/microbench \

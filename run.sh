@@ -166,6 +166,8 @@ function ZipfSamplingTest {
                     --operations_num=0 \
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
+                    --sample_round=10000000 \
+                    --alpha_ratio=100 \
                     --thread_num=1 \
                     --index=btree,art,alex,lipp
                 done
