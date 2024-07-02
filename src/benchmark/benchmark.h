@@ -973,7 +973,7 @@ public:
         operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[j]));
       }
     }
-    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert
+    // no need sort here
     if (operations.size() != operations_num) {
       COUT_N_EXIT("operations.size() != operations_num")
     }
