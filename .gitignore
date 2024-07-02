@@ -362,3 +362,5 @@ MigrationBackup/
 cmake-build*
 
 !src/competitor/wormhole/src
+
+test/
