@@ -1101,10 +1101,11 @@ public:
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     // alpha_ratio;
-    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
-    COUT_VAR(zipf_gen.alpha_);
+    double zipfian_const = 0.99;
+    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      s.insert(zipf_gen.nextValue());
+      s.insert(zipf_gen.next());
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;
@@ -1164,10 +1165,11 @@ public:
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     // alpha_ratio;
-    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
-    COUT_VAR(zipf_gen.alpha_);
+    double zipfian_const = 0.99;
+    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      s.insert(zipf_gen.nextValue());
+      s.insert(zipf_gen.next());
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;
@@ -1228,10 +1230,11 @@ public:
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     // alpha_ratio;
-    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
-    COUT_VAR(zipf_gen.alpha_);
+    double zipfian_const = 0.99;
+    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      s.insert(zipf_gen.nextValue());
+      s.insert(zipf_gen.next());
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;
@@ -1291,10 +1294,11 @@ public:
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     // alpha_ratio;
-    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
-    COUT_VAR(zipf_gen.alpha_);
+    double zipfian_const = 0.99;
+    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      s.insert(zipf_gen.nextValue());
+      s.insert(zipf_gen.next());
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;
@@ -1364,10 +1368,11 @@ public:
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     // alpha_ratio;
-    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
-    COUT_VAR(zipf_gen.alpha_);
+    double zipfian_const = 0.99;
+    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      s.insert(zipf_gen.nextValue());
+      s.insert(zipf_gen.next());
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;
@@ -1439,10 +1444,11 @@ public:
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     // alpha_ratio;
-    ScrambledZipfianGenerator zipf_gen(table_size, nullptr);
-    COUT_VAR(zipf_gen.alpha_);
+    double zipfian_const = 0.99;
+    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      s.insert(zipf_gen.nextValue());
+      s.insert(zipf_gen.next());
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;

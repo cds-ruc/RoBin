@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include "zipf.h"
+#include "generator.h"
 #include "omp.h"
 #include <cassert>
 #include <chrono>
