@@ -67,7 +67,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   int test_suite = 0;
   bool dump_bulkload = false;
   double sigma_ratio = 0.5;
-  double alpha_ratio = 0.5;
+  double zipfian_constant = 0.99;
 
   std::vector<KEY_TYPE> init_keys;
   KEY_TYPE *keys;
@@ -1100,9 +1100,7 @@ public:
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
-    // alpha_ratio;
-    double zipfian_const = 0.99;
-    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       s.insert(zipf_gen.next());
@@ -1164,9 +1162,7 @@ public:
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
-    // alpha_ratio;
-    double zipfian_const = 0.99;
-    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       s.insert(zipf_gen.next());
@@ -1229,9 +1225,7 @@ public:
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
-    // alpha_ratio;
-    double zipfian_const = 0.99;
-    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       s.insert(zipf_gen.next());
@@ -1293,9 +1287,7 @@ public:
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
-    // alpha_ratio;
-    double zipfian_const = 0.99;
-    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       s.insert(zipf_gen.next());
@@ -1367,9 +1359,7 @@ public:
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
-    // alpha_ratio;
-    double zipfian_const = 0.99;
-    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       s.insert(zipf_gen.next());
@@ -1443,9 +1433,7 @@ public:
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
-    // alpha_ratio;
-    double zipfian_const = 0.99;
-    ZipfianGenerator zipf_gen(table_size, zipfian_const, random_seed);
+    ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       s.insert(zipf_gen.next());
@@ -1878,7 +1866,7 @@ public:
     test_suite = stoi(get_with_default(flags, "test_suite", "0"));
     dump_bulkload = get_boolean_flag(flags, "dump_bulkload");
     sigma_ratio = stod(get_with_default(flags, "sigma_ratio", "0.5"));
-    alpha_ratio = stod(get_with_default(flags, "alpha_ratio", "100"));
+    zipfian_constant = stod(get_with_default(flags, "zipfian_constant", "0.99"));
     COUT_THIS("[micro] Read:Insert:Update:Scan:Delete= "
               << read_ratio << ":" << insert_ratio << ":" << update_ratio << ":"
               << scan_ratio << ":" << delete_ratio);
