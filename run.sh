@@ -1,9 +1,9 @@
 #!/bin/bash
 
 numanode=1
-batch=3
+batch=5
 
-all_datasets=("covid" "osm" "fb" "genome" "planet" "linear")
+all_datasets=("covid" "osm" "fb" "genome" "planet")
 # all_datasets=("linear")
 
 function BaselineTest {
@@ -39,7 +39,7 @@ function BaselineTest {
 function SortedBulkTest {
     for dataset in ${all_datasets[@]}
     do
-        for test_suite in 99 999 1 2 3
+        for test_suite in 99 999 1 2 3 
         do
             for init_table_ratio in 0.005 0.01 0.025 0.05 0.1 0.25 0.5
             do
@@ -118,10 +118,10 @@ function AppendTest {
     done
 }
 
-function IntervalTest {
+function IntervalSampingTest {
     for dataset in ${all_datasets[@]}
     do
-        for test_suite in 11 12 13
+        for test_suite in 11 12 13 17 18
         do
             for init_table_ratio in 0.005 0.01 0.025 0.05 0.1 0.25 0.5
             # equvilant to gap_size in 200 100 40 20 10 4 2
@@ -152,7 +152,7 @@ function ZipfSamplingTest {
         for test_suite in 20 21 22 23 24 25
         do
             # for init_table_ratio in 0.005 0.01 0.025 0.05 0.1 0.25 0.5
-            for sampling_round in 1 2 3 4 5
+            for sample_round in 1000000 2000000 5000000
             do
                 for ((i=1; i<=batch; i++))
                 do
@@ -165,9 +165,9 @@ function ZipfSamplingTest {
                     --test_suite=$test_suite \
                     --operations_num=0 \
                     --table_size=-1 \
-                    --init_table_ratio=$init_table_ratio \
-                    --sample_round=10000000 \
-                    --alpha_ratio=100 \
+                    --init_table_ratio=0 \
+                    --sample_round=$sample_round \
+                    --zipfian_constant=0.99 \
                     --thread_num=1 \
                     --index=btree,art,alex,lipp
                 done
@@ -207,6 +207,35 @@ function ShiftTest {
     done
 }
 
+
+function SubstringSamplingTest {
+    for dataset in ${all_datasets[@]}
+    do
+        for test_suite in 15 14 #8 2 7 1 16 3 10#
+        do
+            for init_table_ratio in 0.005 0.01 0.025 0.05 0.1 0.25 0.5
+            do
+                for ((i=1; i<=batch; i++))
+                do
+                    numactl --cpunodebind=$numanode --membind=$numanode \
+                    nice -n -10 ./build/microbench \
+                    --keys_file=datasets/$dataset \
+                    --keys_file_type=binary \
+                    --read=0.0 --insert=0.0 \
+                    --update=0.0 --scan=0.0  --delete=0.0 \
+                    --test_suite=$test_suite \
+                    --operations_num=0 \
+                    --table_size=-1 \
+                    --init_table_ratio=$init_table_ratio \
+                    --thread_num=1 \
+                    --index=btree,art,alex,lipp
+                done
+            done
+        done
+    done
+}
+
+
 # select test from input
 case $1 in
     BaselineTest)
@@ -221,8 +250,8 @@ case $1 in
     AppendTest)
         AppendTest
         ;;
-    IntervalTest)
-        IntervalTest
+    IntervalSampingTest)
+        IntervalSampingTest
         ;;
     ZipfSamplingTest)   
         ZipfSamplingTest
@@ -230,8 +259,11 @@ case $1 in
     ShiftTest)
         ShiftTest
         ;;
+    SubstringSamplingTest)
+        SubstringSamplingTest
+        ;;
     *)
-        echo "Usage: $0 {BaselineTest|SortedBulkTest|NormalSamplingTest|AppendTest|IntervalTest|ZipfSamplingTest|ShiftTest}"
+        echo "Usage: $0 {BaselineTest|SortedBulkTest|NormalSamplingTest|AppendTest|IntervalSampingTest|ZipfSamplingTest|ShiftTest|SubstringSamplingTest}"
         exit 1
 esac
 
