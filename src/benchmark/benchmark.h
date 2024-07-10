@@ -2197,6 +2197,8 @@ public:
             << ",";
       ofile << "init_table_size"
             << ",";
+      ofile << "zipf_constant"
+            << ",";
       ofile << "memory_consumption"
             << ",";
       ofile << "thread_num"
@@ -2250,6 +2252,7 @@ public:
     ofile << index_type << ",";
     ofile << stat.throughput << ",";
     ofile << init_table_size << ",";
+    ofile << zipfian_constant << ",";
     ofile << stat.memory_consumption << ",";
     ofile << thread_num << ",";
     if (latency_sample) {
