@@ -23,6 +23,8 @@ public:
 
   long long memory_consumption() { return index->size_in_bytes(); }
 
+  void print_stats(std::string s) { return ; }
+
 private:
   pgm::DynamicPGMIndex<KEY_TYPE, PAYLOAD_TYPE> *index;
 };

@@ -40,6 +40,8 @@ public:
               Param *param = nullptr);
 
   long long memory_consumption() { return 0; }
+
+  void print_stats(std::string s) { return ; }
 private:
   DILI dili;
 };

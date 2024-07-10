@@ -25,6 +25,16 @@ public:
     return index.model_size() + index.data_size();
   }
 
+  void print_stats(std::string s) {
+    index.print_depth_stats(s);
+    index.print_cmp_stats(s);
+    return ;
+  }
+
+  void reset_stats() {
+    index.reset_data_node_cmp_stats();
+  }
+
 private:
   alex::Alex<KEY_TYPE, PAYLOAD_TYPE, alex::AlexCompare,
              std::allocator<std::pair<KEY_TYPE, PAYLOAD_TYPE>>, false>

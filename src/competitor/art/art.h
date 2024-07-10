@@ -44,6 +44,11 @@ public:
 
   long long memory_consumption() { return idx->size(); }
 
+  void print_stats(std::string s) {
+    idx->print_depth_type_stats(s);
+    return ;
+  }
+
   static void loadKey(TID tid, Key &key) {
     // Store the key of the tuple into the key vector
     // Implementation is database specific
