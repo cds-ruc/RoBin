@@ -65,7 +65,6 @@ function LippBtreeBestTest {
         
         TARGET_DIR="./log/best/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -101,7 +100,6 @@ function LippBtreeWorstTest {
 
         TARGET_DIR="./log/worst/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -141,7 +139,6 @@ function AlexBestTest {
 
         TARGET_DIR="./log/best/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -178,7 +175,6 @@ function AlexBestTest {
 
         TARGET_DIR="./log/best/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -217,7 +213,6 @@ function AlexBestTest {
 
         TARGET_DIR="./log/best/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -256,7 +251,6 @@ function AlexWorstTest {
 
         TARGET_DIR="./log/worst/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -292,7 +286,6 @@ function AlexWorstTest {
 
         TARGET_DIR="./log/worst/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
@@ -328,7 +321,6 @@ function AlexWorstTest {
 
         TARGET_DIR="./log/worst/$dataset"
         if [ ! -d "$TARGET_DIR" ]; then
-        # 如果目标目录不存在，则创建它
         mkdir -p "$TARGET_DIR"
         fi
 
