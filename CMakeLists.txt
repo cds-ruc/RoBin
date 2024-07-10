@@ -29,7 +29,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 add_compile_options(${OpenMP_CXX_FLAGS})
 
-add_definitions(-DPROFILING)
+# add_definitions(-DPROFILING)
 
 # 定义microbench可执行文件
 add_executable(microbench ${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/microbench.cpp)
