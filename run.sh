@@ -121,7 +121,7 @@ function AppendTest {
 function IntervalSampingTest {
     for dataset in ${all_datasets[@]}
     do
-        for test_suite in 11 12 13 17 18
+        for test_suite in 11 12 13 17
         do
             for init_table_ratio in 0.005 0.01 0.025 0.05 0.1 0.25 0.5
             # equvilant to gap_size in 200 100 40 20 10 4 2
