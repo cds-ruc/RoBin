@@ -1,6 +1,6 @@
 #!/bin/bash
 
-numanode=1
+numanode=0
 batch=3
 
 all_datasets=("covid" "osm" "fb" "genome" "planet" "linear")
@@ -11,7 +11,7 @@ function BaselineTest {
     do
         for test_suite in 10
         do
-            init_table_ratio = 1.0
+            init_table_ratio=1.0
             for ((i=1; i<=batch; i++))
             do
                 numactl --cpunodebind=$numanode --membind=$numanode \
