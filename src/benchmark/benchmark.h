@@ -1606,7 +1606,7 @@ public:
     for (size_t i = init_table_size; i < table_size; ++i) {
       operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
     }
-    std::shuffle(operations.begin(), operations.end(), gen); // random insert
+    // random insert
 
     // step 3 backup_operations, backup_operations_num
     backup_operations_num = table_size;
@@ -1660,7 +1660,6 @@ public:
     backup_operations_num = table_size;
     backup_operations.reserve(backup_operations_num);
     KEY_TYPE *sample_ptr = nullptr;
-    std::shuffle(keys, keys + table_size, gen);
     if (sample_distribution == "uniform") {
       sample_ptr = get_search_keys(&keys[0], table_size, backup_operations_num,
                                    &random_seed); // random read
