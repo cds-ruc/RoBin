@@ -1,7 +1,7 @@
 #!/bin/bash
 
-numanode=0
-batch=3
+numanode=1
+batch=1
 
 all_datasets=("covid" "osm" "fb" "genome" "planet" "linear")
 
