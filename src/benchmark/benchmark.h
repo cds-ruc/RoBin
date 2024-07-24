@@ -151,10 +151,6 @@ public:
         run(index);
       #ifdef PROFILING
         index->print_stats("insert");
-        if (index_type == "alex") { // for alex cmp distribution stats, reset before read
-          auto alex = dynamic_cast<alexInterface<KEY_TYPE, PAYLOAD_TYPE> *>(index);
-          alex->reset_stats();
-        }
       #endif
         // 清空一些元信息，转移operations，开始测read
         std::swap(operations, backup_operations);
@@ -163,9 +159,7 @@ public:
         insert_ratio = 0.0;
         run(index);
       #ifdef PROFILING
-        if (index_type == "alex") { // for alex cmp distribution stats
-          index->print_stats("read");
-        }
+        index->print_stats("read");
       #endif
         // swap back, recover
         std::swap(operations, backup_operations);

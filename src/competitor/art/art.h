@@ -45,7 +45,10 @@ public:
   long long memory_consumption() { return idx->size(); }
 
   void print_stats(std::string s) {
-    idx->print_depth_type_stats(s);
+    if (s == "insert") {
+      idx->print_depth_type_stats(s);
+      // idx->verify_structure(s);
+    }
     return ;
   }
 
