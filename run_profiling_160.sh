@@ -4,7 +4,7 @@ numanode=1
 batch=1
 
 # all_datasets=("covid" "osm" "fb" "genome" "planet" "linear")
-all_datasets=("covid" "osm" "fb" "genome" "planet")
+all_datasets=("covid" "linear")
 
 function BaselineTest {
     for dataset in ${all_datasets[@]}
@@ -30,8 +30,11 @@ function BaselineTest {
                 done
             done
         done
-        mv *.log ./log/baseline/$dataset
-        # mv *.csv ./log/baseline/$dataset
+        TARGET_DIR="./log/baseline/$dataset"
+        if [ ! -d "$TARGET_DIR" ]; then
+        mkdir -p "$TARGET_DIR"
+        fi
+        mv *.log "$TARGET_DIR"
     done
 }
 
@@ -67,7 +70,6 @@ function LippBtreeBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 }
 
@@ -100,7 +102,6 @@ function LippBtreeWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 }
 
@@ -137,7 +138,6 @@ function AlexBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("fb")
@@ -170,7 +170,6 @@ function AlexBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("genome" "planet")
@@ -205,7 +204,6 @@ function AlexBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("osm")
@@ -237,7 +235,6 @@ function AlexBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 }
 
@@ -272,7 +269,6 @@ function AlexWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("fb")
@@ -304,7 +300,6 @@ function AlexWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("genome" "planet")
@@ -336,7 +331,6 @@ function AlexWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("osm")
@@ -368,7 +362,6 @@ function AlexWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 }
 
@@ -403,7 +396,6 @@ function ArtBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("fb")
@@ -438,7 +430,6 @@ function ArtBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("genome")
@@ -470,7 +461,6 @@ function ArtBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("osm")
@@ -503,7 +493,6 @@ function ArtBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("planet")
@@ -536,7 +525,6 @@ function ArtBestTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 }
 
@@ -570,7 +558,6 @@ function ArtWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("fb" "osm")
@@ -602,7 +589,6 @@ function ArtWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("genome")
@@ -634,7 +620,6 @@ function ArtWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 
     all_datasets=("planet")
@@ -666,7 +651,6 @@ function ArtWorstTest {
         mkdir -p "$TARGET_DIR"
         fi
         mv *.log "$TARGET_DIR"
-        # mv *.csv "$TARGET_DIR"
     done
 }
 
