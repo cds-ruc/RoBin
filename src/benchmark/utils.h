@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 #pragma once
 
+#include <random>
 #include <sstream>
 #include <iostream>
 #include <functional>
@@ -195,7 +196,25 @@ long long load_text_data(T *&array, long long length, const std::string &file_pa
 }
 
 template<class T>
+T *get_search_keys_refactored(T array[], int num_keys, int num_searches) {
+    auto *keys = new T[num_searches];
+#pragma omp for
+    for (int i = 0; i < num_searches; i++) {
+        keys[i] = i;
+    }
+    std::mt19937 local_gen(1866);
+    std::shuffle(keys, keys+num_keys, local_gen);
+#pragma omp for
+    for (int i = 0; i < num_searches; i++) {
+        keys[i] = array[keys[i]];
+    }
+
+    return keys;
+}
+
+template<class T>
 T *get_search_keys(T array[], int num_keys, int num_searches, size_t *seed = nullptr) {
+    return get_search_keys_refactored(array, num_keys, num_searches);
     auto *keys = new T[num_searches];
 
 #pragma omp parallel

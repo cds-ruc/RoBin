@@ -58,7 +58,8 @@ private:
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 void BTreeInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param) {
-  idx.bulk_load(key_value, key_value + num);
+  // idx.bulk_load(key_value, key_value + num);
+  idx.bulk_load_half(key_value, key_value + num);
 }
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
