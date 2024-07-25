@@ -25,9 +25,13 @@ public:
   long long memory_consumption() { return lipp.total_size(); }
 
   void print_stats(std::string s) {
+    if (s == "bulkload") {
+      lipp.print_depth_stats(s);
+      lipp.print_level_model_stats(s);
+    }
     if (s == "insert") {
       lipp.print_depth_stats(s);
-      // lipp.print_model_stats(s);
+      lipp.print_level_model_stats(s);
     }
     return ;
   }

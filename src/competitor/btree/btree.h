@@ -43,13 +43,11 @@ public:
   long long memory_consumption() { return idx.get_memory_usage(); }
 
   void print_stats(std::string s) {
-    if (s == "insert")
+    if (s == "bulkload" || s == "insert")
       idx.print_depth(s);
     // idx.print_load_factor_stats(s);
     return ;
   }
-
-
 
 private:
   stx::btree<KEY_TYPE, PAYLOAD_TYPE> idx;

@@ -45,7 +45,7 @@ public:
   long long memory_consumption() { return idx->size(); }
 
   void print_stats(std::string s) {
-    if (s == "insert") {
+    if (s == "bulkload" || s == "insert") {
       idx->print_depth_type_stats(s);
       // idx->verify_structure(s);
     }

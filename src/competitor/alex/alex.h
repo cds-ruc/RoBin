@@ -26,14 +26,18 @@ public:
   }
 
   void print_stats(std::string s) {
+    if (s == "bulkload") {
+      index.print_depth_stats(s);
+      index.print_level_model_stats(s);
+    }
     if (s == "insert") {
       index.print_depth_stats(s);
-      // index.print_model_stats(s);
-      // index.print_level_model_stats(s);
+      index.print_level_model_stats(s);
     }
-    // if (s == "read") {
-    //   print_key_cmp_distribution(s);
-    // }
+    if (s == "read") {
+      print_key_cmp_distribution(s);
+      print_key_cmp_stats(s);
+    }
     return ;
   }
 
@@ -52,6 +56,18 @@ private:
     out << "cmp,count" << std::endl;
     for (size_t i = 0; i < key_cmp_distribution.size(); i++) {
       out << i << "," << key_cmp_distribution[i] << std::endl;
+    }
+  }
+  std::vector<std::pair<KEY_TYPE, long long>> key_cmp_stats;
+  void print_key_cmp_stats(std::string s) {
+    std::ofstream out("alex_" + s + "_key_cmp_stats.log");
+    if (!out.is_open()) {
+      std::cerr << "Failed to open file." << std::endl;
+      return;
+    }
+    out << "key,cmp" << std::endl;
+    for (size_t i = 0; i < key_cmp_stats.size(); i++) {
+      out << key_cmp_stats[i].first << "," << key_cmp_stats[i].second << std::endl;
     }
   }
 #endif
@@ -73,6 +89,7 @@ bool alexInterface<KEY_TYPE, PAYLOAD_TYPE>::get(KEY_TYPE key, PAYLOAD_TYPE &val,
     key_cmp_distribution.resize(key_num_exp_search_iterations + 1, 0);
   }
   key_cmp_distribution[key_num_exp_search_iterations]++;
+  key_cmp_stats.push_back(std::make_pair(key, key_num_exp_search_iterations));
 #else
   PAYLOAD_TYPE *res = index.get_payload(key);
 #endif
