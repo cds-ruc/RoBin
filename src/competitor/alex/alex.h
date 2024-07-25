@@ -28,7 +28,6 @@ public:
   void print_stats(std::string s) {
     if (s == "insert") {
       index.print_depth_stats(s);
-      index.print_key_depth_stats(s);
       // index.print_model_stats(s);
       // index.print_level_model_stats(s);
     }
