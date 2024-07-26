@@ -29,10 +29,12 @@ public:
     if (s == "bulkload") {
       index.print_depth_stats(s);
       index.print_level_model_stats(s);
+      index.print_hist_model_stats(s);
     }
     if (s == "insert") {
       index.print_depth_stats(s);
       index.print_level_model_stats(s);
+      index.print_hist_model_stats(s);
     }
     if (s == "read") {
       print_key_cmp_distribution(s);
