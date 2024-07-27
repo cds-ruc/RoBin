@@ -47,7 +47,6 @@ private:
   alex::Alex<KEY_TYPE, PAYLOAD_TYPE, alex::AlexCompare,
              std::allocator<std::pair<KEY_TYPE, PAYLOAD_TYPE>>, false>
       index;
-#ifdef PROFILING
   std::vector<long long> key_cmp_distribution;
   void print_key_cmp_distribution(std::string s) {
     std::ofstream out("alex_" + s + "_key_cmp_distribution.log");
@@ -72,7 +71,6 @@ private:
       out << key_cmp_stats[i].first << "," << key_cmp_stats[i].second << std::endl;
     }
   }
-#endif
 };
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
