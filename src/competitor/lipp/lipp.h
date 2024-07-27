@@ -28,10 +28,12 @@ public:
     if (s == "bulkload") {
       lipp.print_depth_stats(s);
       lipp.print_level_model_stats(s);
+      lipp.print_hist_model_stats(s);
     }
     if (s == "insert") {
       lipp.print_depth_stats(s);
       lipp.print_level_model_stats(s);
+      lipp.print_hist_model_stats(s);
     }
     return ;
   }
