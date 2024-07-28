@@ -142,33 +142,25 @@ public:
         index_t *index;
         // bulkload
         prepare(index, keys);
-#ifdef PROFILING
+      #ifdef PROFILING
         index->print_stats("bulkload");
-#endif
+      #endif
         // insert
         read_ratio = 0.0;
         insert_ratio = 1.0;
         run(index);
-#ifdef PROFILING
+      #ifdef PROFILING
         index->print_stats("insert");
-        if (index_type ==
-            "alex") { // for alex cmp distribution stats, reset before read
-          auto alex =
-              dynamic_cast<alexInterface<KEY_TYPE, PAYLOAD_TYPE> *>(index);
-          alex->reset_stats();
-        }
-#endif
+      #endif
         // 清空一些元信息，转移operations，开始测read
         std::swap(operations, backup_operations);
         std::swap(operations_num, backup_operations_num);
         read_ratio = 1.0;
         insert_ratio = 0.0;
         run(index);
-#ifdef PROFILING
-        if (index_type == "alex") { // for alex cmp distribution stats
-          index->print_stats("read");
-        }
-#endif
+      #ifdef PROFILING
+        index->print_stats("read");
+      #endif
         // swap back, recover
         std::swap(operations, backup_operations);
         std::swap(operations_num, backup_operations_num);

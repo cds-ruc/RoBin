@@ -26,19 +26,53 @@ public:
   }
 
   void print_stats(std::string s) {
-    index.print_depth_stats(s);
-    index.print_cmp_stats(s);
+    if (s == "bulkload") {
+      index.print_depth_stats(s);
+      index.print_level_model_stats(s);
+      index.print_hist_model_stats(s);
+      index.print_smo_stats(s);
+    }
+    if (s == "insert") {
+      index.print_depth_stats(s);
+      index.print_level_model_stats(s);
+      index.print_hist_model_stats(s);
+      index.print_smo_stats(s);
+    }
+    if (s == "read") {
+      print_key_cmp_distribution(s);
+      print_key_cmp_stats(s);
+    }
     return ;
-  }
-
-  void reset_stats() {
-    index.reset_data_node_cmp_stats();
   }
 
 private:
   alex::Alex<KEY_TYPE, PAYLOAD_TYPE, alex::AlexCompare,
              std::allocator<std::pair<KEY_TYPE, PAYLOAD_TYPE>>, false>
       index;
+  std::vector<long long> key_cmp_distribution;
+  void print_key_cmp_distribution(std::string s) {
+    std::ofstream out("alex_" + s + "_key_cmp_distribution.log");
+    if (!out.is_open()) {
+      std::cerr << "Failed to open file." << std::endl;
+      return;
+    }
+    out << "cmp,count" << std::endl;
+    for (size_t i = 0; i < key_cmp_distribution.size(); i++) {
+      out << i << "," << key_cmp_distribution[i] << std::endl;
+    }
+  }
+  std::vector<std::pair<KEY_TYPE, long long>> key_cmp_stats;
+  void print_key_cmp_stats(std::string s) {
+    std::ofstream out("alex_" + s + "_key_cmp_stats.log");
+    if (!out.is_open()) {
+      std::cerr << "Failed to open file." << std::endl;
+      return;
+    }
+    out << "key,cmp" << std::endl;
+    for (size_t i = 0; i < key_cmp_stats.size(); i++) {
+      out << key_cmp_stats[i].first << "," << key_cmp_stats[i].second << std::endl;
+    }
+  }
 };
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
@@ -50,7 +84,17 @@ void alexInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 bool alexInterface<KEY_TYPE, PAYLOAD_TYPE>::get(KEY_TYPE key, PAYLOAD_TYPE &val,
                                                 Param *param) {
+#ifdef PROFILING
+  long long key_num_exp_search_iterations = 0;
+  PAYLOAD_TYPE *res = index.get_payload(key, key_num_exp_search_iterations);
+  if (key_cmp_distribution.size() <= key_num_exp_search_iterations) {
+    key_cmp_distribution.resize(key_num_exp_search_iterations + 1, 0);
+  }
+  key_cmp_distribution[key_num_exp_search_iterations]++;
+  key_cmp_stats.push_back(std::make_pair(key, key_num_exp_search_iterations));
+#else
   PAYLOAD_TYPE *res = index.get_payload(key);
+#endif
   if (res != nullptr) {
     val = *res;
     return true;
