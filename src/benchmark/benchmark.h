@@ -1998,6 +1998,7 @@ public:
     index->bulk_load(init_key_values, init_keys.size(), &param);
     auto end_time = ts.rdtsc();
     bulkload_duration = ts.tsc2ns(end_time) - ts.tsc2ns(start_time);
+    COUT_THIS("bulk load duration: " << bulkload_duration << " ns");
   }
 
   /*
@@ -2220,6 +2221,7 @@ public:
     //    });
     auto diff = tn.tsc2ns(end_time) - tn.tsc2ns(start_time);
     printf("Finish running\n");
+    COUT_THIS("Total time: " << diff << " ns");
 
     // gather thread local variable
     for (auto &p : params) {
