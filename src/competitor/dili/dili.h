@@ -49,7 +49,7 @@ private:
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 void diliInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param) {
-  std::vector<pair<keyType, recordPtr>> bulk_data(num);
+  std::vector<pair<keyType, recordPtr>> bulk_data;
 
   string mirror_dir = "src/competitor/dili/src/build/data/buTree";
   int status = file_utils::path_status(mirror_dir);
@@ -64,7 +64,7 @@ void diliInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
   dili.set_mirror_dir(mirror_dir);
   bool check_reinterpret = true;
   for (long i = 0; i < num; i++) {
-    bulk_data.emplace_back(
+    bulk_data.push_back(
         make_pair((long)(key_value[i].first), (long)(key_value[i].second)));
     if(check_reinterpret && (long)(key_value[i].first)!=key_value[i].first){
       std::cout<<"Warning: key type is not long, reinterpret it as long"<<std::endl;
