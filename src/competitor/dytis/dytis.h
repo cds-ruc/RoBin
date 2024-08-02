@@ -1,10 +1,12 @@
 #include "../indexInterface.h"
 #include "./src/src/DyTIS.h"
 #include "./src/src/DyTIS_impl.h"
+#include <csignal>
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 class dytisInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
+  dytisInterface() { std::signal(SIGTERM, handleSignal); }
   void init(Param *param = nullptr) {}
 
   void bulk_load(std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num,
@@ -22,20 +24,27 @@ public:
               std::pair<KEY_TYPE, PAYLOAD_TYPE> *result,
               Param *param = nullptr);
 
-  long long memory_consumption() {return 0;}
+  long long memory_consumption() { return 0; }
 
-  void print_stats(std::string s) { return ; }
+  void print_stats(std::string s) { return; }
+
+public:
+  void static handleSignal(int signal) {
+    if (signal == SIGTERM) {
+      printf("dytis timeout, dytis_insert_succ: %ld\n", dytis_insert_succ);
+      exit(1);
+    }
+  }
+  inline static uint64_t dytis_insert_succ = 0;
 
 private:
   DyTIS index;
 };
 
-static uint64_t dytis_insert_succ = 0;
-
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 void dytisInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param) {
-  dytis_insert_succ=0;
+  dytis_insert_succ = 0;
   for (auto i = 0; i < num; i++) {
     index.Insert(key_value[i].first, key_value[i].second);
     dytis_insert_succ++;

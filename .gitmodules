@@ -1,28 +1,28 @@
 [submodule "src/competitor/btree/src"]
 	path = src/competitor/btree/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = btree
 [submodule "src/competitor/pgm/src"]
 	path = src/competitor/pgm/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = pgm
 [submodule "src/competitor/alex/src"]
 	path = src/competitor/alex/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = alex
 [submodule "src/competitor/lipp/src"]
 	path = src/competitor/lipp/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = lipp
 [submodule "src/competitor/art/src"]
 	path = src/competitor/art/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = art
 [submodule "src/competitor/dytis/src"]
 	path = src/competitor/dytis/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = dytis
 [submodule "src/competitor/dili/src"]
 	path = src/competitor/dili/src
-	url = https://github.com/jscblack/index_repos.git
+	url = git@github.com:cds-ruc/IndexRepo.git
 	branch = dili

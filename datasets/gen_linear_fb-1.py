@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def generate_linear_dataset():
     """
@@ -9,7 +10,7 @@ def generate_linear_dataset():
     with open('linear', 'wb') as f:
         # Write the number of elements
         f.write(num_elements.to_bytes(8, 'little'))
-        for i in range(1, num_elements):
+        for i in range(1, num_elements + 1):
             # Write each integer
             f.write(i.to_bytes(8, 'little'))
 
@@ -28,6 +29,9 @@ def generate_fb_dataset():
             i = int(i)
             # Write each integer
             f.write(i.to_bytes(8, 'little'))
+    # erase the fb and rename fb-1 to fb
+    os.remove('fb')
+    os.rename('fb-1', 'fb')
 
 if __name__ == '__main__':
     generate_linear_dataset()
