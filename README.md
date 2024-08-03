@@ -55,8 +55,33 @@ bash reproduce.sh
 Using the jupyter notebook to plot the result
 ```shell
 cd script
+## open and run the jupyter notebook to reproduce the figure in our paper
+```
+
+### Profiling
+
+Build with the flag "PROFILING"
+```shell
+rm -rf build
+mkdir -p build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILING=ON
+make -j
+```
+
+**Note that our code modifications for profiling have no impact on index performance when building without this flag**
+
+Run profiling script
+```shell
+bash run_profiling.sh
+```
+
+Using the jupyter notebook to plot the profiling results
+```shell
+cd script
 ## open and run the jupyter notebook to reprocude the figure in our paper
 ```
+
 
 ### Run and Play
 We also provide a script to run the RoBin with custom parameters. You can run the following command to see the help information:
