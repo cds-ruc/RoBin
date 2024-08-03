@@ -26,7 +26,7 @@ If the repository is not cloned with the `--recursive` option, you can run the f
 git submodule update --init --recursive
 ```
 
-Download the dataset from remote and construct **linear** and **fb-1**
+Download the dataset from remote and construct **linear** and **fb-1**:
 ```shell
 cd datasets
 bash download.sh
@@ -44,23 +44,24 @@ make -j
 
 ### Reproduce
 
-Benchmark all the competitors via RoBin with the following command
+Benchmark all the competitors via RoBin with the following command:
 
-**It may cost some time to finish**
+**It may cost some time to finish.**
 ```shell
 export numanode=xxx # if you have multiple numa nodes, you must specify the numa node in case of the memory allocation from different numa nodes
 bash reproduce.sh
 ```
 
-Using the jupyter notebook to plot the result
+Using the jupyter notebook to plot the performance results:
 ```shell
 cd script
-## open and run the jupyter notebook to reproduce the figure in our paper
+## open and run the following jupyter notebook to reproduce the figure in our paper
+## result_plotter.ipynb
 ```
 
 ### Profiling
 
-Build with the flag "PROFILING"
+Build with the flag "PROFILING":
 ```shell
 rm -rf build
 mkdir -p build
@@ -69,17 +70,20 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILI
 make -j
 ```
 
-**Note that our code modifications for profiling have no impact on index performance when building without this flag**
+**Note that our code modifications for profiling have no impact on index performance when building without this flag.**
 
 Run profiling script
 ```shell
 bash run_profiling.sh
 ```
 
-Using the jupyter notebook to plot the profiling results
+Using the jupyter notebook to plot the profiling results:
 ```shell
 cd script
 ## open and run the jupyter notebook to reprocude the figure in our paper
+## analysis_cmp.ipynb
+## analysis_depth.ipynb
+## analysis_overfit.ipynb
 ```
 
 
