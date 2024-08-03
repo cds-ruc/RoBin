@@ -72,7 +72,7 @@ make -j
 
 **Note that our code modifications for profiling have no impact on index performance when building without this flag.**
 
-Run profiling script
+Run profiling script:
 ```shell
 bash run_profiling.sh
 ```
