@@ -1,4 +1,5 @@
-# RoBin
+# RoBin 
+[![RoBin Build](https://github.com/cds-ruc/RoBin/actions/workflows/cmake-build.yml/badge.svg)](https://github.com/cds-ruc/RoBin/actions/workflows/cmake-build.yml)
 
 Robin is a **Ro**bustness **B**enchmark for range **in**dexes (especially for updatable learned indexes).
 
