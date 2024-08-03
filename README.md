@@ -5,11 +5,11 @@ Robin is a **Ro**bustness **B**enchmark for range **in**dexes (especially for up
 ## Notice
 
 1. We only modify the Face dataset to support experiments on ALEX. Because the Face dataset contains the numeric_limit<uint64_t>, ALEX uses this as a sential for easing implementation. Therefore, we shifted all fb keys by minus one as **Face-1** dataset for testing ALEX only.
-2. We modify the LIPP's hyperparameter (TODO) to ensure it can successfully run all the test cases (otherwise it will crash due to its assertion at runtime).
+2. We modify the LIPP's hyperparameter [MAX_DEPTH](https://github.com/cds-ruc/IndexRepo/blob/b237911cb31fc0a94c1b1911b0fbcadb8fd0870f/src/core/lipp.h#L1088) to ensure it can successfully run all the test cases (otherwise it will crash due to its assertion at runtime).
 3. We modify the bulkload process of STX B+tree to ensure its node half filled (load factor = 0.5) after bulkloaading, which aligns its insertions and splits to show its performance robustness.
 4. Other parameters of all indexes are the same as their original implementations.
-5. Index Repo
-6. Profiling Commit 
+5. All of our tested index implementations can be found in [this repo](https://github.com/cds-ruc/IndexRepo). Each branch is corresponding to one index.
+6. We add profiling stats for art, btree, alex and lipp about the distribution of depth, comparison count of leaf node search, the model of root node and so on, with minor invasion.
 
 ## Reproduce Step
 ### Prepare
@@ -26,7 +26,7 @@ If the repository is not cloned with the `--recursive` option, you can run the f
 git submodule update --init --recursive
 ```
 
-Download the dataset from remote and construct **linear** and **fb-1**
+Download the dataset from remote and construct **linear** and **fb-1**:
 ```shell
 cd datasets
 bash download.sh
@@ -44,23 +44,24 @@ make -j
 
 ### Reproduce
 
-Benchmark all the competitors via RoBin with the following command
+Benchmark all the competitors via RoBin with the following command:
 
-**It may cost some time to finish**
+**It may cost some time to finish.**
 ```shell
 export numanode=xxx # if you have multiple numa nodes, you must specify the numa node in case of the memory allocation from different numa nodes
 bash reproduce.sh
 ```
 
-Using the jupyter notebook to plot the result
+Using the jupyter notebook to plot the performance results:
 ```shell
 cd script
-## open and run the jupyter notebook to reproduce the figure in our paper
+## open and run the following jupyter notebook to reproduce the figure in our paper
+## result_plotter.ipynb
 ```
 
 ### Profiling
 
-Build with the flag "PROFILING"
+Build with the flag "PROFILING":
 ```shell
 rm -rf build
 mkdir -p build
@@ -69,17 +70,20 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILI
 make -j
 ```
 
-**Note that our code modifications for profiling have no impact on index performance when building without this flag**
+**Note that our code modifications for profiling have no impact on index performance when building without this flag for benchmark test.**
 
-Run profiling script
+Run profiling script:
 ```shell
 bash run_profiling.sh
 ```
 
-Using the jupyter notebook to plot the profiling results
+Using the jupyter notebook to plot the profiling results:
 ```shell
 cd script
-## open and run the jupyter notebook to reprocude the figure in our paper
+## open and run the following jupyter notebooks to reproduce the figure in our paper
+## analysis_cmp.ipynb
+## analysis_depth.ipynb
+## analysis_overfit.ipynb
 ```
 
 
