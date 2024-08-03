@@ -25,7 +25,7 @@ do
         init_table_ratio=1.0
         for ((i=1; i<=batch; i++))
         do
-            timeout 60m \
+            timeout 30m \
             $numactl_arg ./build/microbench \
             --keys_file=datasets/$dataset \
             --keys_file_type=binary \
@@ -47,7 +47,7 @@ do
         do
             for ((i=1; i<=batch; i++))
             do
-                timeout 60m \
+                timeout 30m \
                 $numactl_arg ./build/microbench \
                 --keys_file=datasets/$dataset \
                 --keys_file_type=binary \
@@ -69,7 +69,7 @@ do
         do
             for ((i=1; i<=batch; i++))
             do
-                timeout 60m \
+                timeout 30m \
                 $numactl_arg ./build/microbench \
                 --keys_file=datasets/$dataset \
                 --keys_file_type=binary \
