@@ -80,7 +80,7 @@ bash run_profiling.sh
 Using the jupyter notebook to plot the profiling results:
 ```shell
 cd script
-## open and run the jupyter notebook to reprocude the figure in our paper
+## open and run the following jupyter notebooks to reproduce the figure in our paper
 ## analysis_cmp.ipynb
 ## analysis_depth.ipynb
 ## analysis_overfit.ipynb
