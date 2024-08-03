@@ -8,8 +8,8 @@ Robin is a **Ro**bustness **B**enchmark for range **in**dexes (especially for up
 2. We modify the LIPP's hyperparameter [MAX_DEPTH](https://github.com/cds-ruc/IndexRepo/blob/b237911cb31fc0a94c1b1911b0fbcadb8fd0870f/src/core/lipp.h#L1088) to ensure it can successfully run all the test cases (otherwise it will crash due to its assertion at runtime).
 3. We modify the bulkload process of STX B+tree to ensure its node half filled (load factor = 0.5) after bulkloaading, which aligns its insertions and splits to show its performance robustness.
 4. Other parameters of all indexes are the same as their original implementations.
-5. Index Repo
-6. Profiling Commit 
+5. All of our tested index implementations can be found in [this repo](https://github.com/cds-ruc/IndexRepo). Each branch is corresponding to one index.
+6. We add profiling stats for art, btree, alex and lipp about the distribution of depth, comparison count of leaf node search, the model of root node and so on, with minor invasion.
 
 ## Reproduce Step
 ### Prepare
@@ -70,7 +70,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILI
 make -j
 ```
 
-**Note that our code modifications for profiling have no impact on index performance when building without this flag.**
+**Note that our code modifications for profiling have no impact on index performance when building without this flag for benchmark test.**
 
 Run profiling script:
 ```shell
