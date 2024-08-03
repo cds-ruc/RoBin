@@ -1,4 +1,8 @@
 # Download Datasets
+
+Note that scripts and dataset on this directory (except gen_linear_fb-1.py) are from [GRE](https://github.com/gre4index/GRE). 
+> Wongkham, Chaichon, et al. "Are updatable learned indexes ready?." Proceedings of the VLDB Endowment 15.11 (2022): 3004-3017.
+
 You can download all the dataset by the script
 ```
 bash download.sh [extra]

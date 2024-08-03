@@ -93,4 +93,5 @@ python3 run.py --help
 
 ## Reference
 
-1. We build this benchmark based on a well-designed benchmark [GRE](<https://github.com/gre4index/GRE>).
+1. We build this benchmark based on a well-designed benchmark [GRE](<https://github.com/gre4index/GRE>). The related papaer is:
+> Wongkham, Chaichon, et al. "Are updatable learned indexes ready?." Proceedings of the VLDB Endowment 15.11 (2022): 3004-3017.
