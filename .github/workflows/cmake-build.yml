@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libtbb-dev libjemalloc-dev libboost-dev
+        sudo apt-get install -y libtbb-dev libmkl-dev libjemalloc-dev libboost-dev
         git submodule update --init --recursive
 
     - name: Configure CMake

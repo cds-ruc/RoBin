@@ -5,8 +5,9 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description="Run RoBin")
-    parser.add_argument('--index', required=True,choices=['btree', 'art', 'alex','lipp','dytis','dili','pgm'], help='index type')
+    parser.add_argument('--index', required=True,choices=['btree', 'art', 'alex','lipp','dytis','dili','pgm','btreeolc','artolc','alexolc','xindex','finedex','sali'], help='index type')
     parser.add_argument('--dataset', required=True,choices=['linear','covid','fb','osm'], help='dataset name')
+    parser.add_argument('--concurrency', required=True, default=1, help='concurrency')
     parser.add_argument('--sampling_method', required=True, choices=['uniform', 'segmented'], help='sampling method')
     parser.add_argument('--bulkload_size', required=True, help='bulkload size')
     parser.add_argument('--insert_pattern', required=True, choices=['sorted', 'shuffled'], help='insert pattern')
@@ -48,7 +49,7 @@ def main():
         print(f"Unknown sampling method: {args.sampling_method}")
         sys.exit(1)
 
-    command = f'{numactl_arg} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num=1 --index={args.index}'
+    command = f'{numactl_arg} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary --dataset_statistic=true --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}'
     print(f"Running command: {command}")
     subprocess.run(command, shell=True)
 

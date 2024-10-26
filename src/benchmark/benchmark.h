@@ -78,6 +78,8 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
     std::vector<double> latency;
     uint64_t throughput = 0;
     size_t fitness_of_dataset = 0;
+    size_t fitness_of_bulkload = 0;
+    size_t fitness_of_insert = 0;
     long long memory_consumption = 0;
     uint64_t success_insert = 0;
     uint64_t success_read = 0;
@@ -89,6 +91,8 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
       latency.clear();
       throughput = 0;
       fitness_of_dataset = 0;
+      fitness_of_bulkload = 0;
+      fitness_of_insert = 0;
       memory_consumption = 0;
       success_insert = 0;
       success_read = 0;
@@ -142,25 +146,25 @@ public:
         index_t *index;
         // bulkload
         prepare(index, keys);
-      #ifdef PROFILING
+#ifdef PROFILING
         index->print_stats("bulkload");
-      #endif
+#endif
         // insert
         read_ratio = 0.0;
         insert_ratio = 1.0;
         run(index);
-      #ifdef PROFILING
+#ifdef PROFILING
         index->print_stats("insert");
-      #endif
+#endif
         // 清空一些元信息，转移operations，开始测read
         std::swap(operations, backup_operations);
         std::swap(operations_num, backup_operations_num);
         read_ratio = 1.0;
         insert_ratio = 0.0;
         run(index);
-      #ifdef PROFILING
+#ifdef PROFILING
         index->print_stats("read");
-      #endif
+#endif
         // swap back, recover
         std::swap(operations, backup_operations);
         std::swap(operations_num, backup_operations_num);
@@ -1238,18 +1242,18 @@ public:
     // step 1 init_keys, init_key_values
     init_keys.resize(table_size); // 临时给大
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
-    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
+    std::unordered_set<uint64_t> s;      // 这里面存放的是key的pos
     std::map<uint64_t, uint64_t> record; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
-      int64_t tmp=zipf_gen.next();
+      int64_t tmp = zipf_gen.next();
       record[tmp]++;
       s.insert(tmp);
     }
-    for(auto x:record){
-      std::cout<<x.first<<" "<<x.second<<"\n";
+    for (auto x : record) {
+      std::cout << x.first << " " << x.second << "\n";
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;
@@ -2244,9 +2248,20 @@ public:
 
     // calculate dataset metric
     if (dataset_statistic) {
-      std::sort(keys, keys + table_size);
+      tbb::parallel_sort(keys, keys + table_size);
       stat.fitness_of_dataset =
           pgmMetric::PGM_metric(keys, table_size, error_bound);
+      stat.fitness_of_bulkload = pgmMetric::PGM_metric(
+          init_keys.data(), init_keys.size(), error_bound);
+      if (insert_ratio == 1.0) {
+        tbb::parallel_sort(operations.begin(), operations.end()); // sorted
+        stat.fitness_of_insert = pgmMetric::PGM_metric(operations, error_bound);
+      } else if (read_ratio == 1.0) {
+        tbb::parallel_sort(backup_operations.begin(),
+                           backup_operations.end()); // sorted
+        stat.fitness_of_insert =
+            pgmMetric::PGM_metric(backup_operations, error_bound);
+      }
     }
 
     // record memory consumption
@@ -2350,7 +2365,11 @@ public:
             << ",";
       ofile << "data_shift"
             << ",";
-      ofile << "pgm"
+      ofile << "fitness_of_dataset"
+            << ",";
+      ofile << "fitness_of_bulkload"
+            << ",";
+      ofile << "fitness_of_insert"
             << ",";
       ofile << "error_bound"
                ",";
@@ -2401,6 +2420,8 @@ public:
     ofile << latency_sample << ",";
     ofile << data_shift << ",";
     ofile << stat.fitness_of_dataset << ",";
+    ofile << stat.fitness_of_bulkload << ",";
+    ofile << stat.fitness_of_insert << ",";
     ofile << error_bound << ",";
     ofile << table_size << ",";
     ofile << test_suite << std::endl;

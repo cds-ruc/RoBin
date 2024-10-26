@@ -1,8 +1,8 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
-#include <utility>
 #include <string>
+#include <utility>
 
 struct Param { // for xindex
   size_t worker_num;
@@ -45,6 +45,7 @@ public:
   virtual void init(Param *param = nullptr) = 0;
 
   virtual long long memory_consumption() = 0; // bytes
-
+#ifdef PROFILING
   virtual void print_stats(std::string s) = 0;
+#endif
 };

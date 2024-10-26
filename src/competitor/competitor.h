@@ -1,11 +1,17 @@
 #include "./alex/alex.h"
+#include "./alexolc/alexolc.h"
 #include "./art/art.h"
+#include "./artolc/artolc.h"
 #include "./btree/btree.h"
+#include "./btreeolc/btreeolc.h"
 #include "./dili/dili.h"
 #include "./dytis/dytis.h"
+#include "./findex/finedex.h"
 #include "./indexInterface.h"
 #include "./lipp/lipp.h"
 #include "./pgm/pgm.h"
+#include "./sali/sali.h"
+#include "./xindex/xindex.h"
 #include <iostream>
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
@@ -25,7 +31,21 @@ indexInterface<KEY_TYPE, PAYLOAD_TYPE> *get_index(std::string index_type) {
     index = new dytisInterface<KEY_TYPE, PAYLOAD_TYPE>;
   } else if (index_type == "dili") {
     index = new diliInterface<KEY_TYPE, PAYLOAD_TYPE>;
-  } else {
+  } else if (index_type == "btreeolc") {
+    index = new BTreeOLCInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "artolc") {
+    index = new ARTOLCInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "xindex") {
+    index = new xindexInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "finedex") {
+    index = new finedexInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "alexolc") {
+    index = new alexolInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "sali") {
+    index = new SALIInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  }
+
+  else {
     std::cout << "Could not find a matching index called " << index_type
               << ".\n";
     exit(0);

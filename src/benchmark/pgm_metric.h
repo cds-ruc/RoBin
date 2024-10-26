@@ -461,6 +461,33 @@ namespace pgmMetric {
 
     return metric;
   }
+  template<typename OP_TYPE,typename KEY_TYPE>
+  size_t PGM_metric(std::vector<std::pair<OP_TYPE, KEY_TYPE>> &operations, int error_bound, double *mse = nullptr) {
+    pgmMetric::OptimalPiecewiseLinearModel<KEY_TYPE, uint64_t> segment(error_bound);
+    std::sort(operations.begin(), operations.end(), [](const std::pair<OP_TYPE, KEY_TYPE> &a, const std::pair<OP_TYPE, KEY_TYPE> &b) {
+      return a.second < b.second;
+    });
+    size_t metric = 1;
+    double mse_sum = 0;
+    double max = 0;
+    for(auto i = 0; i < operations.size(); i++) {
+      if(!segment.add_point(operations[i].second, i)) {
+        metric++;
+        if(mse) {
+          auto mse_segment = segment.get_mse_metric();
+          mse_sum += mse_segment;
+        }
+        segment.reset();
+        segment.add_point(operations[i].second, i);
+      }
+    }
+
+    if(mse) {
+      *mse = mse_sum / metric;
+    }
+
+    return metric;
+  }
 
   template<typename KEY_TYPE>
   double skew_variance(KEY_TYPE *keys, int key_num, int error_bound, size_t count = 100000) {

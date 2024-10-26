@@ -26,3 +26,27 @@
 	path = src/competitor/dili/src
 	url = https://github.com/cds-ruc/IndexRepo.git
 	branch = dili
+[submodule "src/competitor/alexolc/src"]
+	path = src/competitor/alexolc/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = alexolc
+[submodule "src/competitor/artolc/src"]
+	path = src/competitor/artolc/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = artolc
+[submodule "src/competitor/btreeolc/src"]
+	path = src/competitor/btreeolc/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = btreeolc
+[submodule "src/competitor/findex/src"]
+	path = src/competitor/findex/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = findex
+[submodule "src/competitor/xindex/src"]
+	path = src/competitor/xindex/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = xindex
+[submodule "src/competitor/sali/src"]
+	path = src/competitor/sali/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = sali

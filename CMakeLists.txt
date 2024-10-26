@@ -16,6 +16,7 @@ include(ExternalProject)
 find_package(OpenMP REQUIRED)
 find_package(JeMalloc REQUIRED)
 find_package(TBB REQUIRED)
+find_package(MKL REQUIRED)
 find_package(Boost REQUIRED)
 
 # 设置C++标准
@@ -24,6 +25,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 包含头文件目录
 include_directories(${TBB_INCLUDE_DIRS})
+include_directories(${MKL_INCLUDE_DIRS})
 include_directories(${JEMALLOC_INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -49,4 +51,5 @@ target_link_libraries(microbench PUBLIC
     ${OpenMP_CXX_LIBRARIES}
     ${JEMALLOC_LIBRARIES}
     ${TBB_LIBRARIES}
+    ${MKL_LIBRARIES}
 )
