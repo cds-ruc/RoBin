@@ -64,7 +64,7 @@
 # * TBB_VERSION_MAJOR     - The major version
 # * TBB_VERSION_MINOR     - The minor version
 # * TBB_INTERFACE_VERSION - The interface version number defined in 
-#                           tbb/version.h.
+#                           tbb/version.h or tbb/tbb_stddef.h for older version.
 # * TBB_<library>_LIBRARY_RELEASE - The path of the TBB release version of 
 #                           <library>, where <library> may be tbb, tbb_debug,
 #                           tbbmalloc, tbbmalloc_debug, tbb_preview, or 
@@ -184,7 +184,13 @@ if(NOT TBB_FOUND)
   ##################################
 
   if(TBB_INCLUDE_DIRS)
-    file(READ "${TBB_INCLUDE_DIRS}/tbb/version.h" _tbb_version_file)
+    if(EXISTS "${TBB_INCLUDE_DIRS}/tbb/tbb_stddef.h")
+      file(READ "${TBB_INCLUDE_DIRS}/tbb/tbb_stddef.h" _tbb_version_file)
+    elseif(EXISTS "${TBB_INCLUDE_DIRS}/tbb/version.h")
+      file(READ "${TBB_INCLUDE_DIRS}/tbb/version.h" _tbb_version_file)
+    else()
+      message(FATAL_ERROR "Could not find the TBB version file.")
+    endif()
     string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR ([0-9]+).*" "\\1"
         TBB_VERSION_MAJOR "${_tbb_version_file}")
     string(REGEX REPLACE ".*#define TBB_VERSION_MINOR ([0-9]+).*" "\\1"
