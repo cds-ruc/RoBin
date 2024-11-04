@@ -46,6 +46,12 @@ target_compile_options(microbench PRIVATE
     $<$<CONFIG:OPTI_ENHANCE>:-O3 -march=native -faligned-new -flto -funroll-all-loops>
 )
 
+add_subdirectory(src/competitor/masstree)
+
+target_link_libraries(microbench PRIVATE
+    MASSTREE
+)
+
 # 链接依赖库
 target_link_libraries(microbench PUBLIC 
     ${OpenMP_CXX_LIBRARIES}
