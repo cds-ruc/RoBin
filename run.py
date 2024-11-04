@@ -5,13 +5,13 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description="Run RoBin")
-    parser.add_argument('--index', required=True,choices=['btree', 'art', 'alex','lipp','dytis','dili','pgm','btreeolc','artolc','alexolc','xindex','finedex','sali'], help='index type')
-    parser.add_argument('--dataset', required=True,choices=['linear','covid','fb','osm'], help='dataset name')
+    parser.add_argument('--index', required=True,choices=['btree', 'art', 'alex','lipp','dytis','dili','pgm','btreeolc','artolc','masstree','alexolc','lippolc','xindex','finedex','sali'], help='index type')
+    parser.add_argument('--dataset', required=True,choices=['linear','covid','fb','fb-1','osm'], help='dataset name')
     parser.add_argument('--concurrency', required=True, default=1, help='concurrency')
     parser.add_argument('--sampling_method', required=True, choices=['uniform', 'segmented'], help='sampling method')
     parser.add_argument('--bulkload_size', required=True, help='bulkload size')
     parser.add_argument('--insert_pattern', required=True, choices=['sorted', 'shuffled'], help='insert pattern')
-    parser.add_argument('--isocpus', help='isocpus')
+    parser.add_argument('--taskset', help='taskset')
 
     args = parser.parse_args()
 
@@ -50,14 +50,16 @@ def main():
         print(f"Unknown sampling method: {args.sampling_method}")
         sys.exit(1)
 
-    if args.isocpus is None:
-        args.isocpus = ""
+    if args.taskset is None:
+        args.taskset = ""
     else:
-        args.isocpus = "taskset -c "+args.isocpus
+        args.taskset = "taskset -c "+args.taskset
 
-    command = f'{numactl_arg} {args.isocpus} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary --dataset_statistic=true --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}'
+    command = f'{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary --dataset_statistic=true --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}'
     print(f"Running command: {command}")
-    subprocess.run(command, shell=True)
-
+    try:
+        subprocess.run(command, shell=True, timeout=1800)
+    except subprocess.TimeoutExpired:
+        print("Timeout case, fail cmd is: ", command)
 if __name__ == "__main__":
     main()

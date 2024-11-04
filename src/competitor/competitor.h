@@ -12,6 +12,8 @@
 #include "./pgm/pgm.h"
 #include "./sali/sali.h"
 #include "./xindex/xindex.h"
+#include "./lippolc/lippolc.h"
+#include "./masstree/masstree.h"
 #include <iostream>
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
@@ -43,6 +45,10 @@ indexInterface<KEY_TYPE, PAYLOAD_TYPE> *get_index(std::string index_type) {
     index = new alexolInterface<KEY_TYPE, PAYLOAD_TYPE>;
   } else if (index_type == "sali") {
     index = new SALIInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "lippolc") {
+    index = new LIPPOLInterface<KEY_TYPE, PAYLOAD_TYPE>;
+  } else if (index_type == "masstree") {
+    index = new MasstreeInterface<KEY_TYPE, PAYLOAD_TYPE>;
   }
 
   else {

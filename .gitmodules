@@ -50,3 +50,19 @@
 	path = src/competitor/sali/src
 	url = https://github.com/cds-ruc/IndexRepo.git
 	branch = sali
+[submodule "src/competitor/src/competitor/masstree/src"]
+	path = src/competitor/src/competitor/masstree/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = masstree
+[submodule "src/competitor/src/competitor/lippolc/src"]
+	path = src/competitor/src/competitor/lippolc/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = lippolc
+[submodule "src/competitor/masstree/src"]
+	path = src/competitor/masstree/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = masstree
+[submodule "src/competitor/lippolc/src"]
+	path = src/competitor/lippolc/src
+	url = https://github.com/cds-ruc/IndexRepo.git
+	branch = lippolc
