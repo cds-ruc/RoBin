@@ -8,7 +8,7 @@ def main():
     parser.add_argument('--index', required=True,choices=['btree', 'art', 'alex','lipp','dytis','dili','pgm','btreeolc','artolc','masstree','alexolc','lippolc','xindex','finedex','sali'], help='index type')
     parser.add_argument('--dataset', required=True,choices=['linear','covid','fb','fb-1','osm'], help='dataset name')
     parser.add_argument('--concurrency', required=True, default=1, help='concurrency')
-    parser.add_argument('--sampling_method', required=True, choices=['uniform', 'segmented'], help='sampling method')
+    parser.add_argument('--sampling_method', required=True, choices=['uniform', 'segmented', 'full'], help='sampling method')
     parser.add_argument('--bulkload_size', required=True, help='bulkload size')
     parser.add_argument('--insert_pattern', required=True, choices=['sorted', 'shuffled'], help='insert pattern')
     parser.add_argument('--taskset', help='taskset')
@@ -46,6 +46,12 @@ def main():
         else:
             print(f"Unknown insert pattern: {args.insert_pattern}")
             sys.exit(1)
+    elif args.sampling_method == "full":
+        if args.bulkload_size != "200000000" or args.insert_pattern != "sorted":
+            print(f"Full sampling only supports bulkload size 200000000 and insert pattern sorted")
+            sys.exit(1)
+        else:
+            test_suite = 10
     else:
         print(f"Unknown sampling method: {args.sampling_method}")
         sys.exit(1)

@@ -3,8 +3,8 @@
 # Define the possible values for each parameter
 index_options=("btreeolc" "artolc" "masstree" "alexolc" "lippolc" "xindex" "finedex" "dytis" "sali")
 dataset_options=("linear" "covid" "fb-1" "osm")
-sampling_method_options=("segmented" "uniform")
-bulkload_size_options=("1000000" "2000000" "5000000" "10000000" "20000000" "50000000" "100000000")
+sampling_method_options=("full" "uniform" "segmented")
+bulkload_size_options=("0" "1000000" "2000000" "5000000" "10000000" "20000000" "50000000" "100000000" "200000000")
 insert_pattern_options=("sorted" "shuffled")
 concurrency_options=(1 2 4 8 16)
 
@@ -15,7 +15,15 @@ for index in "${index_options[@]}"; do
       for bulkload_size in "${bulkload_size_options[@]}"; do
         for insert_pattern in "${insert_pattern_options[@]}"; do
           for concurrency in "${concurrency_options[@]}"; do
-            
+            if [ "$sampling_method" == "full" ] && [ "$bulkload_size" != "200000000" ] && [ "$insert_pattern_options" != "sorted" ]; then
+              # Skip full sampling with bulkload sizes other than 200M and insert patterns must be sorted
+              continue
+            fi
+            if [ "$bulkload_size" == "0" ] && [ "$sampling_method_options" != "uniform" ]; then
+              # Skip bulkload size 0 with sampling_method_options other than uniform
+              continue
+            fi
+
             # Construct the base command
             cmd="python3 run.py --index $index --dataset $dataset --concurrency $concurrency"
             
