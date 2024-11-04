@@ -15,41 +15,41 @@ for index in "${index_options[@]}"; do
       for bulkload_size in "${bulkload_size_options[@]}"; do
         for insert_pattern in "${insert_pattern_options[@]}"; do
           for concurrency in "${concurrency_options[@]}"; do
-            if [ "$sampling_method" == "full" ] && [ "$bulkload_size" != "200000000" ] && [ "$insert_pattern" != "sorted" ]; then
+            if [ "$sampling_method" = "full" ] && { [ "$bulkload_size" != "200000000" ] || [ "$insert_pattern" != "sorted" ]; }; then
               # Skip full sampling with bulkload sizes other than 200M and insert patterns must be sorted
               continue
             fi
-            if [ "$bulkload_size" == "0" ] && [ "$sampling_method" != "uniform" ]; then
+
+            if [ "$bulkload_size" = "0" ] && [ "$sampling_method" != "uniform" ]; then
               # Skip bulkload size 0 with sampling_method_options other than uniform
               continue
             fi
 
             # Construct the base command
-            cmd="python3 run.py --index $index --dataset $dataset --concurrency $concurrency"
+            cmd="python3 run.py --index=$index --dataset=$dataset --concurrency=$concurrency"
             
             # Add optional parameters
             if [ -n "$sampling_method" ]; then
-              cmd+=" --sampling_method $sampling_method"
+              cmd+=" --sampling_method=$sampling_method"
             fi
             if [ -n "$bulkload_size" ]; then
-              cmd+=" --bulkload_size $bulkload_size"
+              cmd+=" --bulkload_size=$bulkload_size"
             fi
             if [ -n "$insert_pattern" ]; then
-              cmd+=" --insert_pattern $insert_pattern"
+              cmd+=" --insert_pattern=$insert_pattern"
             fi
             
             # Determine taskset CPUs based on concurrency, starting from CPU 2
             if (( concurrency > 0 )); then
               # Generate a comma-separated list from 2 up to (2 + concurrency - 1)
               end_cpu=$((2 + concurrency - 1))
-              taskset=$(seq -s, 2 $end_cpu)
-              cmd+=" --taskset $taskset"
+              cmd+=" --taskset=2-$end_cpu"
             fi
             
             # Run the command 3 times
             for epoch in {1..3}; do
               echo "Running command (epoch $epoch): $cmd"
-              eval "$cmd > run.log"
+              eval "$cmd >> run.log"
             done
           done
         done
