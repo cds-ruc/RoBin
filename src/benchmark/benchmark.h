@@ -2395,7 +2395,7 @@ public:
     ofile << zipfian_constant << ",";
     ofile << stat.memory_consumption << ",";
     ofile << thread_num << ",";
-    if (latency_sample) {
+    if (latency_sample && stat.latency.size() > 0) {
       ofile << stat.latency[0] << ",";
       ofile << stat.latency[0.5 * stat.latency.size()] << ",";
       ofile << stat.latency[0.9 * stat.latency.size()] << ",";
