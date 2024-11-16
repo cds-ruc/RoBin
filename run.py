@@ -64,8 +64,17 @@ def main():
     command = f'{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary --dataset_statistic=true --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}'
     print(f"Running command: {command}")
     try:
-        subprocess.run(command, shell=True, timeout=1800)
+        proc = subprocess.Popen(command.split())
+        proc.wait(timeout=1800)
     except subprocess.TimeoutExpired:
         print("Timeout case, fail cmd is: ", command)
+        proc.kill()  # 强制终止子进程
+    except subprocess.CalledProcessError as e:
+        print(f"Subprocess failed with error code {e.returncode}: {e}")
+        proc.terminate()  # 终止子进程
+    finally:
+        if proc.poll() is None:  # 检查是否仍在运行
+            proc.kill()
+
 if __name__ == "__main__":
     main()
