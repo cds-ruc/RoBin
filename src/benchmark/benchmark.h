@@ -52,6 +52,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   std::string index_type;
   std::string keys_file_path;
   std::string backup_keys_file_path;
+  std::string preload_keys_file_path;
   std::string keys_file_type;
   std::string sample_distribution;
   bool latency_sample = false;
@@ -63,6 +64,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   bool dataset_statistic;
   bool data_shift = false;
   int test_suite = 0;
+  int preload_suite = 0;
   bool dump_bulkload = false;
   double sigma_ratio = 0.5;
   double zipfian_constant = 0.99;
@@ -70,6 +72,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   std::vector<KEY_TYPE> init_keys;
   KEY_TYPE *keys;
   KEY_TYPE *backup_keys;
+  KEY_TYPE *preload_keys;
   std::pair<KEY_TYPE, PAYLOAD_TYPE> *init_key_values;
   std::vector<std::pair<Operation, KEY_TYPE>> operations;
   std::mt19937 gen;
@@ -1897,6 +1900,170 @@ the same variable "table_size" when loading
 
   */
 
+  void run_preload_custom_suite() {
+    assert(preload_suite);
+    /// generate preload keys and operations
+    ///
+    // Here, we don't reuse keys[] to avoid the influence of gen
+    if (preload_suite == 1) { // use osm to preload
+      preload_keys_file_path = keys_file_path;
+      size_t pos = preload_keys_file_path.rfind('/'); // assert osm is in the same directory
+      preload_keys_file_path.replace(pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
+    } else if (preload_suite == 2) {  // use the same dataset to preload
+      preload_keys_file_path = keys_file_path;
+    } else {
+      assert(false);
+      return ;
+    }
+    COUT_VAR(preload_keys_file_path);
+    preload_keys = load_keys_inner(preload_keys_file_path);
+    generate_preload_dataset_inner();
+    // reserve preload init key values
+    std::pair<KEY_TYPE, PAYLOAD_TYPE> *preload_init_key_values = init_key_values;
+    std::vector<KEY_TYPE> preload_init_keys = init_keys;
+    // reserve preload delete operations
+    std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
+    size_t preload_delete_operations_num = init_table_size;
+    for (size_t i = 0; i < init_table_size; ++i) {
+      preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, init_keys[i]));
+    }
+
+    /// generate custom suite keys and operations
+    ///
+    keys = load_keys_inner(keys_file_path);
+    // if (test_suite == 8888 /*for mixed dataset*/) {
+    //   INVARIANT(!backup_keys_file_path.empty());
+    //   backup_keys = load_keys_inner(backup_keys_file_path);
+    // }
+    generate_dataset_inner();
+    // transform init keys into init insert opertions and recover init key values
+    std::vector<std::pair<Operation, KEY_TYPE>> init_insert_operations;
+    size_t init_insert_operations_num = init_table_size;
+    for (size_t i = 0; i < init_table_size; ++i) {
+      init_insert_operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, init_keys[i]));
+    }
+    delete[] init_key_values;
+    init_key_values = preload_init_key_values;
+    init_keys = preload_init_keys;
+    // reserve insert operations
+    std::vector<std::pair<Operation, KEY_TYPE>> insert_operations;
+    size_t insert_operations_num;
+    std::swap(operations, insert_operations);
+    std::swap(operations_num, insert_operations_num);
+
+    /// run
+    ///
+    for (auto s : all_index_type) {
+      for (auto t : all_thread_num) {
+        thread_num = stoi(t);
+        index_type = s;
+        index_t *index;
+        // preload - bulkload
+        prepare(index, preload_keys);
+        // preload - delete
+        std::swap(operations, preload_delete_operations);
+        std::swap(operations_num, preload_delete_operations_num);
+        read_ratio = 0.0;
+        insert_ratio = 0.0;
+        delete_ratio = 1.0;
+        run(index);
+        // bulkload - insert
+        std::swap(operations, init_insert_operations);
+        std::swap(operations_num, init_insert_operations_num);
+        read_ratio = 0.0;
+        insert_ratio = 1.0;
+        delete_ratio = 0.0;
+        run(index);
+#ifdef PROFILING
+        index->print_stats("bulkload");
+#endif
+        // insert - insert
+        std::swap(operations, insert_operations);
+        std::swap(operations_num, insert_operations_num);
+        read_ratio = 0.0;
+        insert_ratio = 1.0;
+        run(index);
+#ifdef PROFILING
+        index->print_stats("insert");
+#endif
+        // 清空一些元信息，转移operations，开始测read
+        std::swap(operations, backup_operations);
+        std::swap(operations_num, backup_operations_num);
+        read_ratio = 1.0;
+        insert_ratio = 0.0;
+        run(index);
+#ifdef PROFILING
+        index->print_stats("read");
+#endif
+        // swap back, recover
+        std::swap(operations, backup_operations);
+        std::swap(operations_num, backup_operations_num);
+        if (index != nullptr)
+          delete index;
+      }
+    }
+  }
+
+  void generate_preload_dataset_inner() {
+    switch (preload_suite) {
+    case 1: {
+      generate_preload_dataset_case1(); // use osm <uniform sampling, 100M> to preload
+      break;
+    };
+    case 2: {
+      generate_preload_dataset_case2(); // use the same dataset <uniform sampling, bulkload size> to preload
+      break;
+    };
+    default:
+      assert(false);
+      break;
+    }
+  }
+
+  void generate_preload_dataset_case1() {
+    std::mt19937 preload_gen(random_seed);
+    std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
+    init_table_size = 0.5 * table_size; // 100M osm
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (preload_keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
+  void generate_preload_dataset_case2() {
+    std::mt19937 preload_gen(random_seed);
+    std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
+    init_table_size = init_table_ratio * table_size; // the same proportion as bulkload size
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (preload_keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
 public:
   Benchmark() {}
 
@@ -2062,6 +2229,7 @@ public:
     sigma_ratio = stod(get_with_default(flags, "sigma_ratio", "0.5"));
     zipfian_constant =
         stod(get_with_default(flags, "zipfian_constant", "0.99"));
+    preload_suite = stoi(get_with_default(flags, "preload_suite", "0"));
     COUT_THIS("[micro] Read:Insert:Update:Scan:Delete= "
               << read_ratio << ":" << insert_ratio << ":" << update_ratio << ":"
               << scan_ratio << ":" << delete_ratio);
@@ -2274,9 +2442,13 @@ public:
   }
 
   void print_stat(bool header = false, bool clear_flag = true) {
-    if (test_suite == 10 && insert_ratio == 1.0 && stat.throughput == 0) {
-      // lookup baseline. calc the bulkload throughput
-      stat.throughput = table_size * 1000000000 / bulkload_duration;
+    if (preload_suite) {
+      
+    } else {
+      if (test_suite == 10 && insert_ratio == 1.0 && stat.throughput == 0) {
+        // lookup baseline. calc the bulkload throughput
+        stat.throughput = table_size * 1000000000 / bulkload_duration;
+      }
     }
 
     double avg_latency = 0;
@@ -2375,7 +2547,9 @@ public:
                ",";
       ofile << "table_size"
                ",";
-      ofile << "test_suite" << std::endl;
+      ofile << "test_suite"
+               ",";
+      ofile << "preload_suite" << std::endl;
     }
 
     std::ofstream ofile;
@@ -2424,7 +2598,8 @@ public:
     ofile << stat.fitness_of_insert << ",";
     ofile << error_bound << ",";
     ofile << table_size << ",";
-    ofile << test_suite << std::endl;
+    ofile << test_suite << ",";
+    ofile << preload_suite << std::endl;
     ofile.close();
 
     if (clear_flag)
@@ -2433,7 +2608,11 @@ public:
 
   void run_benchmark() {
     if (test_suite) {
-      run_custom_suite();
+      if (preload_suite) {
+        run_preload_custom_suite();
+      } else {
+        run_custom_suite();
+      }
       return;
     }
     load_keys();
