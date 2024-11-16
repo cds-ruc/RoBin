@@ -65,12 +65,15 @@ def main():
     print(f"Running command: {command}")
     try:
         proc = subprocess.Popen(command.split())
-        proc.wait(timeout=1800)
+        ret = proc.wait(timeout=1800)
+        if ret != 0:
+            print(f"Subprocess failed with error code {ret}. Failed command: {command}")
+            proc.terminate()
     except subprocess.TimeoutExpired:
-        print("Timeout case, fail cmd is: ", command)
+        print(f"Subprocess timeout, kill it. Failed command: {command}")
         proc.kill()  # 强制终止子进程
     except subprocess.CalledProcessError as e:
-        print(f"Subprocess failed with error code {e.returncode}: {e}")
+        print(f"Subprocess failed with error code {e.returncode}: {e}. Failed command: {command}")
         proc.terminate()  # 终止子进程
     finally:
         if proc.poll() is None:  # 检查是否仍在运行
