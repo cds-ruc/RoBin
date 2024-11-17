@@ -2442,13 +2442,9 @@ public:
   }
 
   void print_stat(bool header = false, bool clear_flag = true) {
-    if (preload_suite) {
-      
-    } else {
-      if (test_suite == 10 && insert_ratio == 1.0 && stat.throughput == 0) {
-        // lookup baseline. calc the bulkload throughput
-        stat.throughput = table_size * 1000000000 / bulkload_duration;
-      }
+    if (test_suite == 10 && insert_ratio == 1.0 && stat.throughput == 0) {
+      // lookup baseline. calc the bulkload throughput
+      stat.throughput = table_size * 1000000000 / bulkload_duration;
     }
 
     double avg_latency = 0;
