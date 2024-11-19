@@ -15,6 +15,11 @@ for index in "${index_options[@]}"; do
       for bulkload_size in "${bulkload_size_options[@]}"; do
         for insert_pattern in "${insert_pattern_options[@]}"; do
           for concurrency in "${concurrency_options[@]}"; do
+            if [ "$bulkload_size" = "200000000" ] && [ "$insert_pattern" != "full" ]; then
+              # Skip bulkload size 200M with insert patterns other than full
+              continue
+            fi
+            
             if [ "$sampling_method" = "full" ] && { [ "$bulkload_size" != "200000000" ] || [ "$insert_pattern" != "sorted" ]; }; then
               # Skip full sampling with bulkload sizes other than 200M and insert patterns must be sorted
               continue
