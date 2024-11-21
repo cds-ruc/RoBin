@@ -1968,13 +1968,13 @@ the same variable "table_size" when loading
     std::vector<KEY_TYPE> delete_sub_insert;
     for (size_t i = 0; i < preload_delete_operations.size(); ++i) {
       if (init_insert_keys_set.find(preload_delete_operations[i].second) == init_insert_keys_set.end()) {
-        delete_sub_insert.insert(preload_delete_operations[i].second);
+        delete_sub_insert.push_back(preload_delete_operations[i].second);
       }
     }
     std::vector<KEY_TYPE> insert_sub_delete;
     for (size_t i = 0; i < init_insert_operations.size(); ++i) {
       if (preload_delete_keys_set.find(init_insert_operations[i].second) == preload_delete_keys_set.end()) {
-        insert_sub_delete.insert(init_insert_operations[i].second);
+        insert_sub_delete.push_back(init_insert_operations[i].second);
       }
     }
     assert(delete_sub_insert.size() == insert_sub_delete.size());
