@@ -1951,6 +1951,39 @@ the same variable "table_size" when loading
     std::swap(operations, insert_operations);
     std::swap(operations_num, insert_operations_num);
 
+    /// interleave preload delete operations and init insert operations
+    // 
+    std::vector<std::pair<Operation, KEY_TYPE>> insert_delete_operations;
+    std::unordered_set<KEY_TYPE> preload_delete_keys_set;
+    for (size_t i = 0; i < preload_delete_operations.size(); ++i) {
+      preload_delete_keys_set.insert(preload_delete_operations[i].second);
+    }
+    std::unordered_set<KEY_TYPE> init_insert_keys_set;
+    for (size_t i = 0; i < init_insert_operations.size(); ++i) {
+      init_insert_keys_set.insert(init_insert_operations[i].second);
+    }
+    // 轮流插入preload delete operations 和 init insert operations
+    // 如果preload_delete_keys不在init_insert_keys_set里面，就删除
+    // 如果init_insert_keys不在preload_delete_keys_set里面，就插入
+    std::vector<KEY_TYPE> delete_sub_insert;
+    for (size_t i = 0; i < preload_delete_operations.size(); ++i) {
+      if (init_insert_keys_set.find(preload_delete_operations[i].second) == init_insert_keys_set.end()) {
+        delete_sub_insert.insert(preload_delete_operations[i].second);
+      }
+    }
+    std::vector<KEY_TYPE> insert_sub_delete;
+    for (size_t i = 0; i < init_insert_operations.size(); ++i) {
+      if (preload_delete_keys_set.find(init_insert_operations[i].second) == preload_delete_keys_set.end()) {
+        insert_sub_delete.insert(init_insert_operations[i].second);
+      }
+    }
+    assert(delete_sub_insert.size() == insert_sub_delete.size());
+    for (size_t i = 0; i < delete_sub_insert.size(); ++i) {
+      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, insert_sub_delete[i]));
+      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, delete_sub_insert[i]));
+    }
+    size_t insert_delete_operations_num = insert_delete_operations.size();
+
     /// run
     ///
     for (auto s : all_index_type) {
@@ -1960,22 +1993,15 @@ the same variable "table_size" when loading
         index_t *index;
         // preload - bulkload
         prepare(index, preload_keys);
-        // preload - delete
-        std::swap(operations, preload_delete_operations);
-        std::swap(operations_num, preload_delete_operations_num);
+        // preload - delete & bulkload - insert
+        std::swap(operations, insert_delete_operations);
+        std::swap(operations_num, insert_delete_operations_num);
         read_ratio = 0.0;
-        insert_ratio = 0.0;
-        delete_ratio = 1.0;
-        run(index);
-        // bulkload - insert
-        std::swap(operations, init_insert_operations);
-        std::swap(operations_num, init_insert_operations_num);
-        read_ratio = 0.0;
-        insert_ratio = 1.0;
-        delete_ratio = 0.0;
+        insert_ratio = 0.5;
+        delete_ratio = 0.5;
         run(index);
 #ifdef PROFILING
-        index->print_stats("bulkload");
+        index->print_stats("bulkload (insert & delete)");
 #endif
         // insert - insert
         std::swap(operations, insert_operations);
@@ -2004,45 +2030,7 @@ the same variable "table_size" when loading
     }
   }
 
-  void generate_preload_dataset_inner() {
-    switch (preload_suite) {
-    case 1: {
-      generate_preload_dataset_case1(); // use osm <uniform sampling, 100M> to preload
-      break;
-    };
-    case 2: {
-      generate_preload_dataset_case2(); // use the same dataset <uniform sampling, bulkload size> to preload
-      break;
-    };
-    default:
-      assert(false);
-      break;
-    }
-  }
-
-  void generate_preload_dataset_case1() {
-    std::mt19937 preload_gen(random_seed);
-    std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
-    init_table_size = 0.5 * table_size; // 100M osm
-    init_keys.resize(init_table_size);
-    // 从最左端开始，然后取init_table_size个key
-    size_t start_pos = 0;
-#pragma omp parallel for num_threads(thread_num)
-    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
-      init_keys[i - start_pos] = (preload_keys[i]);
-    }
-    tbb::parallel_sort(init_keys.begin(), init_keys.end());
-    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
-#pragma omp parallel for num_threads(thread_num)
-    for (int i = 0; i < init_keys.size(); i++) {
-      init_key_values[i].first = init_keys[i];
-      init_key_values[i].second = 123456789;
-    }
-    COUT_VAR(table_size);
-    COUT_VAR(init_keys.size());
-  }
-
-  void generate_preload_dataset_case2() {
+  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload size> to preload
     std::mt19937 preload_gen(random_seed);
     std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
     init_table_size = init_table_ratio * table_size; // the same proportion as bulkload size
