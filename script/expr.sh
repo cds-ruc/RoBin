@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define the possible values for each parameter
-index_options=("btreeolc" "artolc" "masstree" "alexolc" "lippolc" "xindex" "finedex" "dytis" "sali")
+index_options=("btreeolc" "artolc" "alexolc" "finedex" "dytis" "sali")
 dataset_options=("linear" "covid" "fb-1" "osm")
 sampling_method_options=("full" "uniform" "segmented")
-bulkload_size_options=("0" "1000000" "2000000" "5000000" "10000000" "20000000" "50000000" "100000000" "200000000")
+bulkload_size_options=("0" "10000000" "200000000")
 insert_pattern_options=("sorted" "shuffled")
 concurrency_options=(1 2 4 8 16)
 mixed_rw=0
@@ -15,7 +15,7 @@ for index in "${index_options[@]}"; do
       for bulkload_size in "${bulkload_size_options[@]}"; do
         for insert_pattern in "${insert_pattern_options[@]}"; do
           for concurrency in "${concurrency_options[@]}"; do
-            if [ "$bulkload_size" = "200000000" ] && [ "$sampling_method_options" != "full" ]; then
+            if [ "$bulkload_size" = "200000000" ] && [ "$sampling_method" != "full" ]; then
               # Skip bulkload size 200M with sampling method other than full
               continue
             fi
