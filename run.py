@@ -11,6 +11,7 @@ def main():
     parser.add_argument('--sampling_method', required=True, choices=['uniform', 'segmented', 'full'], help='sampling method')
     parser.add_argument('--bulkload_size', required=True, help='bulkload size')
     parser.add_argument('--insert_pattern', required=True, choices=['sorted', 'shuffled'], help='insert pattern')
+    parser.add_argument('--mixed_rw',required=False,default=False,help='mix read-write ops')
     parser.add_argument('--taskset', help='taskset')
 
     args = parser.parse_args()
@@ -38,6 +39,8 @@ def main():
         else:
             print(f"Unknown insert pattern: {args.insert_pattern}")
             sys.exit(1)
+        if args.mixed_rw:
+            test_suite*=10
     elif args.sampling_method == "segmented":
         if args.insert_pattern == "sorted":
             test_suite = 41
@@ -46,6 +49,8 @@ def main():
         else:
             print(f"Unknown insert pattern: {args.insert_pattern}")
             sys.exit(1)
+        if args.mixed_rw:
+            test_suite*=10
     elif args.sampling_method == "full":
         if args.bulkload_size != "200000000" or args.insert_pattern != "sorted":
             print(f"Full sampling only supports bulkload size 200000000 and insert pattern sorted")

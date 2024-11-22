@@ -7,7 +7,7 @@ sampling_method_options=("full" "uniform" "segmented")
 bulkload_size_options=("0" "1000000" "2000000" "5000000" "10000000" "20000000" "50000000" "100000000" "200000000")
 insert_pattern_options=("sorted" "shuffled")
 concurrency_options=(1 2 4 8 16)
-
+mixed_rw=0
 # Iterate over all combinations of parameters
 for index in "${index_options[@]}"; do
   for dataset in "${dataset_options[@]}"; do
@@ -15,8 +15,8 @@ for index in "${index_options[@]}"; do
       for bulkload_size in "${bulkload_size_options[@]}"; do
         for insert_pattern in "${insert_pattern_options[@]}"; do
           for concurrency in "${concurrency_options[@]}"; do
-            if [ "$bulkload_size" = "200000000" ] && [ "$insert_pattern" != "full" ]; then
-              # Skip bulkload size 200M with insert patterns other than full
+            if [ "$bulkload_size" = "200000000" ] && [ "$sampling_method_options" != "full" ]; then
+              # Skip bulkload size 200M with sampling method other than full
               continue
             fi
             
@@ -49,6 +49,11 @@ for index in "${index_options[@]}"; do
               # Generate a comma-separated list from 2 up to (2 + concurrency - 1)
               end_cpu=$((2 + concurrency - 1))
               cmd+=" --taskset=2-$end_cpu"
+            fi
+
+            # If mix the read-write
+            if ((mixed_rw)); then
+              cmd+=" --mixed_rw=1"
             fi
             
             # Run the command 3 times

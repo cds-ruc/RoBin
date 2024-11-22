@@ -137,10 +137,6 @@ public:
   void run_custom_suite() {
     assert(test_suite);
     keys = load_keys_inner(keys_file_path);
-    // if (test_suite == 8888 /*for mixed dataset*/) {
-    //   INVARIANT(!backup_keys_file_path.empty());
-    //   backup_keys = load_keys_inner(backup_keys_file_path);
-    // }
     generate_dataset_inner();
     for (auto s : all_index_type) {
       for (auto t : all_thread_num) {
@@ -152,27 +148,66 @@ public:
 #ifdef PROFILING
         index->print_stats("bulkload");
 #endif
-        // insert
-        read_ratio = 0.0;
-        insert_ratio = 1.0;
-        run(index);
+        if (test_suite >= 210) {
+          // rw mixed case
+          // merge operation with backup operation
+          // read_ratio = (double)backup_operations_num /
+          //              (operations_num + backup_operations_num);
+          // insert_ratio = 1.0 - read_ratio;
+          read_ratio = 0.5;
+          insert_ratio = 0.5;
+          std::vector<std::pair<Operation, KEY_TYPE>> tmp_operations;
+          tmp_operations.resize(2 * operations_num);
+          for (int i = 0; i < operations_num; i++) {
+            tmp_operations[2 * i] = operations[i];
+            tmp_operations[2 * i + 1] = backup_operations[i];
+          }
+          //           std::atomic<int> j(0);
+          // #pragma omp parallel num_threads(2) \
+//     shared(tmp_operations, operations, backup_operations, j)
+          //           {
+          //             int thread_id = omp_get_thread_num();
+          //             if (thread_id == 0) {
+          //               for (int i = 0; i < operations_num; ++i) {
+          //                 int jj = j++;
+          //                 tmp_operations[jj] = operations[i];
+          //               }
+          //             } else if (thread_id == 1) {
+          //               for (int i = 0; i < backup_operations_num; ++i) {
+          //                 int jj = j++;
+          //                 tmp_operations[jj] = backup_operations[i];
+          //               }
+          //             }
+          //           }
+          assert(tmp_operations.size() == 2 * operations_num);
+          operations = tmp_operations;
+          operations_num = operations.size();
+          run(index);
+        } else {
+          // seprated case
+          // insert
+          read_ratio = 0.0;
+          insert_ratio = 1.0;
+          run(index);
 #ifdef PROFILING
-        index->print_stats("insert");
+          index->print_stats("insert");
 #endif
-        // 清空一些元信息，转移operations，开始测read
-        std::swap(operations, backup_operations);
-        std::swap(operations_num, backup_operations_num);
-        read_ratio = 1.0;
-        insert_ratio = 0.0;
-        run(index);
+          // 清空一些元信息，转移operations，开始测read
+          std::swap(operations, backup_operations);
+          std::swap(operations_num, backup_operations_num);
+          read_ratio = 1.0;
+          insert_ratio = 0.0;
+          run(index);
 #ifdef PROFILING
-        index->print_stats("read");
+          index->print_stats("read");
 #endif
-        // swap back, recover
-        std::swap(operations, backup_operations);
-        std::swap(operations_num, backup_operations_num);
-        if (index != nullptr)
+          // swap back, recover
+          std::swap(operations, backup_operations);
+          std::swap(operations_num, backup_operations_num);
+        }
+        if (index != nullptr) {
           delete index;
+        }
       }
     }
   }
@@ -308,6 +343,26 @@ public:
     }
     case 102: {
       generate_dataset_case102();
+      break;
+    }
+    case 210: {
+      // based on 21, but mix the read and insert
+      generate_dataset_case21();
+      break;
+    }
+    case 220: {
+      // based on 22, but mix the read and insert
+      generate_dataset_case22();
+      break;
+    }
+    case 410: {
+      // based on 41, but mix the read and insert
+      generate_dataset_case41();
+      break;
+    }
+    case 420: {
+      // based on 42, but mix the read and insert
+      generate_dataset_case42();
       break;
     }
     default:
@@ -1907,25 +1962,29 @@ the same variable "table_size" when loading
     // Here, we don't reuse keys[] to avoid the influence of gen
     if (preload_suite == 1) { // use osm to preload
       preload_keys_file_path = keys_file_path;
-      size_t pos = preload_keys_file_path.rfind('/'); // assert osm is in the same directory
-      preload_keys_file_path.replace(pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
-    } else if (preload_suite == 2) {  // use the same dataset to preload
+      size_t pos = preload_keys_file_path.rfind(
+          '/'); // assert osm is in the same directory
+      preload_keys_file_path.replace(
+          pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
+    } else if (preload_suite == 2) { // use the same dataset to preload
       preload_keys_file_path = keys_file_path;
     } else {
       assert(false);
-      return ;
+      return;
     }
     COUT_VAR(preload_keys_file_path);
     preload_keys = load_keys_inner(preload_keys_file_path);
     generate_preload_dataset_inner();
     // reserve preload init key values
-    std::pair<KEY_TYPE, PAYLOAD_TYPE> *preload_init_key_values = init_key_values;
+    std::pair<KEY_TYPE, PAYLOAD_TYPE> *preload_init_key_values =
+        init_key_values;
     std::vector<KEY_TYPE> preload_init_keys = init_keys;
     // reserve preload delete operations
     std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
     size_t preload_delete_operations_num = init_table_size;
     for (size_t i = 0; i < init_table_size; ++i) {
-      preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, init_keys[i]));
+      preload_delete_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(DELETE, init_keys[i]));
     }
 
     /// generate custom suite keys and operations
@@ -1936,11 +1995,13 @@ the same variable "table_size" when loading
     //   backup_keys = load_keys_inner(backup_keys_file_path);
     // }
     generate_dataset_inner();
-    // transform init keys into init insert opertions and recover init key values
+    // transform init keys into init insert opertions and recover init key
+    // values
     std::vector<std::pair<Operation, KEY_TYPE>> init_insert_operations;
     size_t init_insert_operations_num = init_table_size;
     for (size_t i = 0; i < init_table_size; ++i) {
-      init_insert_operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, init_keys[i]));
+      init_insert_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(INSERT, init_keys[i]));
     }
     delete[] init_key_values;
     init_key_values = preload_init_key_values;
@@ -1952,7 +2013,7 @@ the same variable "table_size" when loading
     std::swap(operations_num, insert_operations_num);
 
     /// interleave preload delete operations and init insert operations
-    // 
+    //
     std::vector<std::pair<Operation, KEY_TYPE>> insert_delete_operations;
     std::unordered_set<KEY_TYPE> preload_delete_keys_set;
     for (size_t i = 0; i < preload_delete_operations.size(); ++i) {
@@ -1967,20 +2028,24 @@ the same variable "table_size" when loading
     // 如果init_insert_keys不在preload_delete_keys_set里面，就插入
     std::vector<KEY_TYPE> delete_sub_insert;
     for (size_t i = 0; i < preload_delete_operations.size(); ++i) {
-      if (init_insert_keys_set.find(preload_delete_operations[i].second) == init_insert_keys_set.end()) {
+      if (init_insert_keys_set.find(preload_delete_operations[i].second) ==
+          init_insert_keys_set.end()) {
         delete_sub_insert.push_back(preload_delete_operations[i].second);
       }
     }
     std::vector<KEY_TYPE> insert_sub_delete;
     for (size_t i = 0; i < init_insert_operations.size(); ++i) {
-      if (preload_delete_keys_set.find(init_insert_operations[i].second) == preload_delete_keys_set.end()) {
+      if (preload_delete_keys_set.find(init_insert_operations[i].second) ==
+          preload_delete_keys_set.end()) {
         insert_sub_delete.push_back(init_insert_operations[i].second);
       }
     }
     assert(delete_sub_insert.size() == insert_sub_delete.size());
     for (size_t i = 0; i < delete_sub_insert.size(); ++i) {
-      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, insert_sub_delete[i]));
-      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, delete_sub_insert[i]));
+      insert_delete_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(INSERT, insert_sub_delete[i]));
+      insert_delete_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(DELETE, delete_sub_insert[i]));
     }
     size_t insert_delete_operations_num = insert_delete_operations.size();
 
@@ -2030,10 +2095,12 @@ the same variable "table_size" when loading
     }
   }
 
-  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload size> to preload
+  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload
+                                          // size> to preload
     std::mt19937 preload_gen(random_seed);
     std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
-    init_table_size = init_table_ratio * table_size; // the same proportion as bulkload size
+    init_table_size =
+        init_table_ratio * table_size; // the same proportion as bulkload size
     init_keys.resize(init_table_size);
     // 从最左端开始，然后取init_table_size个key
     size_t start_pos = 0;
