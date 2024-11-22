@@ -76,6 +76,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   std::pair<KEY_TYPE, PAYLOAD_TYPE> *init_key_values;
   std::vector<std::pair<Operation, KEY_TYPE>> operations;
   std::mt19937 gen;
+  std::mt19937 preload_gen;
 
   struct Stat {
     std::vector<double> latency;
@@ -2023,7 +2024,6 @@ the same variable "table_size" when loading
     for (size_t i = 0; i < init_insert_operations.size(); ++i) {
       init_insert_keys_set.insert(init_insert_operations[i].second);
     }
-    // 轮流插入preload delete operations 和 init insert operations
     // 如果preload_delete_keys不在init_insert_keys_set里面，就删除
     // 如果init_insert_keys不在preload_delete_keys_set里面，就插入
     std::vector<KEY_TYPE> delete_sub_insert;
@@ -2041,11 +2041,16 @@ the same variable "table_size" when loading
       }
     }
     assert(delete_sub_insert.size() == insert_sub_delete.size());
+    // shuffle corresponding insert keys and delete keys
+    std::vector<std::pair<KEY_TYPE, KEY_TYPE>> insert_delete_keys;
     for (size_t i = 0; i < delete_sub_insert.size(); ++i) {
-      insert_delete_operations.push_back(
-          std::pair<Operation, KEY_TYPE>(INSERT, insert_sub_delete[i]));
-      insert_delete_operations.push_back(
-          std::pair<Operation, KEY_TYPE>(DELETE, delete_sub_insert[i]));
+      insert_delete_keys.push_back(std::pair<KEY_TYPE, KEY_TYPE>(insert_sub_delete[i], delete_sub_insert[i]));
+    }
+    std::shuffle(insert_delete_keys.begin(), insert_delete_keys.end(), gen);
+    // 轮流插入preload delete operations 和 init insert operations
+    for (size_t i = 0; i < insert_delete_keys.size(); ++i) {
+      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, insert_delete_keys[i].first));
+      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, insert_delete_keys[i].second));
     }
     size_t insert_delete_operations_num = insert_delete_operations.size();
 
@@ -2073,6 +2078,7 @@ the same variable "table_size" when loading
         std::swap(operations_num, insert_operations_num);
         read_ratio = 0.0;
         insert_ratio = 1.0;
+        delete_ratio = 0.0;
         run(index);
 #ifdef PROFILING
         index->print_stats("insert");
@@ -2095,9 +2101,7 @@ the same variable "table_size" when loading
     }
   }
 
-  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload
-                                          // size> to preload
-    std::mt19937 preload_gen(random_seed);
+  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload size> to preload
     std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
     init_table_size =
         init_table_ratio * table_size; // the same proportion as bulkload size
@@ -2276,6 +2280,7 @@ public:
     output_path = get_with_default(flags, "output_path", "./out.csv");
     random_seed = stoul(get_with_default(flags, "seed", "1866"));
     gen.seed(random_seed);
+    preload_gen.seed(random_seed);
     memory_record = get_boolean_flag(flags, "memory");
     dataset_statistic = get_boolean_flag(flags, "dataset_statistic");
     data_shift = get_boolean_flag(flags, "data_shift");
