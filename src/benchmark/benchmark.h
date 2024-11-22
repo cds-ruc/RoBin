@@ -2015,6 +2015,7 @@ the same variable "table_size" when loading
         std::swap(operations_num, insert_operations_num);
         read_ratio = 0.0;
         insert_ratio = 1.0;
+        delete_ratio = 0.0;
         run(index);
 #ifdef PROFILING
         index->print_stats("insert");
