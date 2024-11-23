@@ -166,7 +166,9 @@ public:
             tmp_operations[2 * i] = operations[i];
             // tmp_operations[2 * i + 1] = backup_operations[i]; merge from
             // backup_operations
-            tmp_operations[2 * i + 1] = init_keys.at(gen() % init_keys.size()); // merge from init_keys
+            tmp_operations[2 * i + 1] = {
+                READ,
+                init_keys[gen() % init_keys.size()]}; // merge from init_keys
           }
           //           std::atomic<int> j(0);
           // #pragma omp parallel num_threads(2) \
