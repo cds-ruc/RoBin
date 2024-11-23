@@ -10,6 +10,7 @@
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <cassert>
+#include <csignal>
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -77,6 +78,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   std::vector<std::pair<Operation, KEY_TYPE>> operations;
   std::mt19937 gen;
   std::mt19937 preload_gen;
+  std::mt19937 mixed_gen;
 
   struct Stat {
     std::vector<double> latency;
@@ -159,9 +161,12 @@ public:
           insert_ratio = 0.5;
           std::vector<std::pair<Operation, KEY_TYPE>> tmp_operations;
           tmp_operations.resize(2 * operations_num);
+          // init_keys
           for (int i = 0; i < operations_num; i++) {
             tmp_operations[2 * i] = operations[i];
-            tmp_operations[2 * i + 1] = backup_operations[i];
+            // tmp_operations[2 * i + 1] = backup_operations[i]; merge from
+            // backup_operations
+            tmp_operations[2 * i + 1] = init_keys.at(gen() % init_keys.size()); // merge from init_keys
           }
           //           std::atomic<int> j(0);
           // #pragma omp parallel num_threads(2) \
@@ -2044,13 +2049,16 @@ the same variable "table_size" when loading
     // shuffle corresponding insert keys and delete keys
     std::vector<std::pair<KEY_TYPE, KEY_TYPE>> insert_delete_keys;
     for (size_t i = 0; i < delete_sub_insert.size(); ++i) {
-      insert_delete_keys.push_back(std::pair<KEY_TYPE, KEY_TYPE>(insert_sub_delete[i], delete_sub_insert[i]));
+      insert_delete_keys.push_back(std::pair<KEY_TYPE, KEY_TYPE>(
+          insert_sub_delete[i], delete_sub_insert[i]));
     }
     std::shuffle(insert_delete_keys.begin(), insert_delete_keys.end(), gen);
     // 轮流插入preload delete operations 和 init insert operations
     for (size_t i = 0; i < insert_delete_keys.size(); ++i) {
-      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, insert_delete_keys[i].first));
-      insert_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, insert_delete_keys[i].second));
+      insert_delete_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(INSERT, insert_delete_keys[i].first));
+      insert_delete_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(DELETE, insert_delete_keys[i].second));
     }
     size_t insert_delete_operations_num = insert_delete_operations.size();
 
@@ -2101,7 +2109,8 @@ the same variable "table_size" when loading
     }
   }
 
-  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload size> to preload
+  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload
+                                          // size> to preload
     std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
     init_table_size =
         init_table_ratio * table_size; // the same proportion as bulkload size
@@ -2281,6 +2290,7 @@ public:
     random_seed = stoul(get_with_default(flags, "seed", "1866"));
     gen.seed(random_seed);
     preload_gen.seed(random_seed);
+    mixed_gen.seed(random_seed);
     memory_record = get_boolean_flag(flags, "memory");
     dataset_statistic = get_boolean_flag(flags, "dataset_statistic");
     data_shift = get_boolean_flag(flags, "data_shift");
