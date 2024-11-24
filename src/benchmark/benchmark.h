@@ -1976,6 +1976,10 @@ the same variable "table_size" when loading
           pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
     } else if (preload_suite == 2) { // use the same dataset to preload
       preload_keys_file_path = keys_file_path;
+    } else if (preload_suite == 3) {  // use sampled type domain to preload
+      // no need to set preload_keys_file_path
+    } else if (preload_suite == 4) {  // use sampled dataset domain to preload
+      preload_keys_file_path = keys_file_path;
     } else {
       assert(false);
       return;
@@ -2111,7 +2115,7 @@ the same variable "table_size" when loading
     }
   }
 
-  void generate_preload_dataset_inner() { // use <uniform sampling, bulkload
+  void generate_preload_dataset_case1_2() { // use <uniform sampling, bulkload
                                           // size> to preload
     std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
     init_table_size =
@@ -2132,6 +2136,72 @@ the same variable "table_size" when loading
     }
     COUT_VAR(table_size);
     COUT_VAR(init_keys.size());
+  }
+
+  void generate_preload_dataset_case3() { // use sampled type domain to preload
+    init_table_size =
+        init_table_ratio * table_size; // the same proportion as bulkload size
+    init_keys.resize(init_table_size);
+    size_t gap_size = UINT64_MAX / init_table_size;
+    COUT_VAR(gap_size);
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = 0; i < init_table_size; i++) {
+      init_keys[i] = i * gap_size;
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
+  void generate_preload_dataset_case4() { // use sampled dataset domain to preload
+    init_table_size =
+        init_table_ratio * table_size; // the same proportion as bulkload size
+    init_keys.resize(init_table_size);
+    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) / init_table_size;
+    COUT_VAR(gap_size);
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = 0; i < init_table_size; i++) {
+      init_keys[i] = i * gap_size;
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
+  void generate_preload_dataset_inner() {
+    switch (preload_suite) {
+    case 1: {
+      generate_preload_dataset_case1_2();
+      break;
+    };
+    case 2: {
+      generate_preload_dataset_case1_2();
+      break;
+    };
+    case 3: {
+      generate_preload_dataset_case3();
+      break;
+    };
+    case 4: {
+      generate_preload_dataset_case4();
+      break;
+    };
+    default:
+      assert(false);
+      break;
+    }
   }
 
 public:
