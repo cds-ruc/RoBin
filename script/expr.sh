@@ -4,10 +4,15 @@
 index_options=("btreeolc" "artolc" "alexolc" "finedex" "dytis" "sali")
 dataset_options=("linear" "covid" "fb-1" "osm")
 sampling_method_options=("full" "uniform" "segmented")
-bulkload_size_options=("0" "10000000" "200000000")
+bulkload_size_options=("0" "1000000" "2000000" "5000000" "10000000" "20000000" "50000000" "100000000" "200000000")
+# bulkload_size_options=("0" "100000000" "200000000") # for multi-thread
 insert_pattern_options=("sorted" "shuffled")
-concurrency_options=(1 2 4 8 16)
+concurrency_options=(1)
+# concurrency_options=(1 2 4 8 16)
 mixed_rw=0
+numanode=0
+export numanode=$numanode
+
 # Iterate over all combinations of parameters
 for index in "${index_options[@]}"; do
   for dataset in "${dataset_options[@]}"; do
@@ -47,8 +52,13 @@ for index in "${index_options[@]}"; do
             # Determine taskset CPUs based on concurrency, starting from CPU 2
             if (( concurrency > 0 )); then
               # Generate a comma-separated list from 2 up to (2 + concurrency - 1)
-              end_cpu=$((2 + concurrency - 1))
-              cmd+=" --taskset=2-$end_cpu"
+              if (( numanode == 0 )); then
+                end_cpu=$((2 + concurrency - 1))
+                cmd+=" --taskset=2-$end_cpu"
+              else
+                end_cpu=$((20 + concurrency - 1))
+                cmd+=" --taskset=20-$end_cpu"
+              fi
             fi
 
             # If mix the read-write

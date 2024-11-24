@@ -29,9 +29,6 @@ def generate_fb_dataset():
             i = int(i)
             # Write each integer
             f.write(i.to_bytes(8, 'little'))
-    # erase the fb and rename fb-1 to fb
-    os.remove('fb')
-    os.rename('fb-1', 'fb')
 
 if __name__ == '__main__':
     generate_linear_dataset()

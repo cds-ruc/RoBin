@@ -4,5 +4,5 @@ git submodule update --init --recursive
 rm -rf build
 mkdir -p build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake .. -DCMAKE_BUILD_TYPE=OPTI_LIGHT -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 make -j
