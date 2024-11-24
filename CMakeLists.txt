@@ -42,7 +42,6 @@ add_executable(microbench ${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/microbench.c
 # 针对不同构建类型设置编译选项
 target_compile_options(microbench PRIVATE
     $<$<CONFIG:DEBUG>:-g -Og -march=native -faligned-new>
-    $<$<CONFIG:OPTI_LIGHT>:-O1 -march=native -faligned-new>
     $<$<CONFIG:RELEASE>:-O3 -march=native -faligned-new>
     $<$<CONFIG:OPTI_ENHANCE>:-O3 -march=native -faligned-new -flto -funroll-all-loops>
 )
