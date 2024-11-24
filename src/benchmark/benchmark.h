@@ -1977,7 +1977,7 @@ the same variable "table_size" when loading
     } else if (preload_suite == 2) { // use the same dataset to preload
       preload_keys_file_path = keys_file_path;
     } else if (preload_suite == 3) {  // use sampled type domain to preload
-      // no need to set preload_keys_file_path
+      preload_keys_file_path = keys_file_path;
     } else if (preload_suite == 4) {  // use sampled dataset domain to preload
       preload_keys_file_path = keys_file_path;
     } else {
