@@ -12,6 +12,7 @@ def main():
     parser.add_argument('--bulkload_size', required=True, help='bulkload size')
     parser.add_argument('--insert_pattern', required=True, choices=['sorted', 'shuffled'], help='insert pattern')
     parser.add_argument('--mixed_rw',required=False,default=False,help='mix read-write ops')
+    parser.add_argument('--hardness_statistic',required=False,default=False,help='hardness statistic')
     parser.add_argument('--taskset', help='taskset')
 
     args = parser.parse_args()
@@ -66,7 +67,12 @@ def main():
     else:
         args.taskset = "taskset -c "+args.taskset
 
-    command = f'{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary --dataset_statistic=true --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}'
+    if args.hardness_statistic is None:
+        args.hadness_statistic = ""
+    else:
+        args.hadness_statistic = " --dataset_statistic=true"
+
+    command = f'{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary {args.hardness_statistic} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}'
     print(f"Running command: {command}")
     try:
         proc = subprocess.Popen(command.split())

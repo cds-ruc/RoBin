@@ -2566,11 +2566,6 @@ public:
       if (insert_ratio == 1.0) {
         tbb::parallel_sort(operations.begin(), operations.end()); // sorted
         stat.fitness_of_insert = pgmMetric::PGM_metric(operations, error_bound);
-      } else if (read_ratio == 1.0) {
-        tbb::parallel_sort(backup_operations.begin(),
-                           backup_operations.end()); // sorted
-        stat.fitness_of_insert =
-            pgmMetric::PGM_metric(backup_operations, error_bound);
       }
     }
 
