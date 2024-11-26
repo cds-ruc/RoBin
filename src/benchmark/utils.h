@@ -203,7 +203,7 @@ T *get_search_keys_refactored(T array[], int num_keys, int num_searches) {
         keys[i] = i;
     }
     std::mt19937 local_gen(1866);
-    std::shuffle(keys, keys+num_keys, local_gen);
+    std::shuffle(keys, keys+num_searches, local_gen);
 #pragma omp for
     for (int i = 0; i < num_searches; i++) {
         keys[i] = array[keys[i]];

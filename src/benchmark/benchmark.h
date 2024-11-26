@@ -140,6 +140,10 @@ public:
   void run_custom_suite() {
     assert(test_suite);
     keys = load_keys_inner(keys_file_path);
+    if (test_suite / 1000 == 8 /*for mixed dataset*/) {
+      INVARIANT(!backup_keys_file_path.empty());
+      backup_keys = load_keys_inner(backup_keys_file_path);
+    }
     generate_dataset_inner();
     for (auto s : all_index_type) {
       for (auto t : all_thread_num) {
@@ -151,7 +155,8 @@ public:
 #ifdef PROFILING
         index->print_stats("bulkload");
 #endif
-        if (test_suite >= 210) {
+        if (test_suite == 210 || test_suite == 220 || test_suite == 410 ||
+            test_suite == 420) {
           // rw mixed case
           // merge operation with backup operation
           // read_ratio = (double)backup_operations_num /
@@ -371,6 +376,16 @@ public:
     case 420: {
       // based on 42, but mix the read and insert
       generate_dataset_case42();
+      break;
+    }
+    case 8221: {
+      // mixed dataset uniform sampling, uniform sampling, shuffled
+      generate_dataset_case8221();
+      break;
+    }
+    case 8222: {
+      // mixed dataset uniform sampling, uniform sampling, shuffled
+      generate_dataset_case8222();
       break;
     }
     default:
@@ -1741,6 +1756,129 @@ public:
     }
     delete[] sample_ptr;
   }
+  // two dataset, uniform bulkload, unifrom/sorted insert
+  void generate_dataset_case8221() {
+    INVARIANT(backup_keys!=nullptr);
+    std::unordered_set<KEY_TYPE> bulk_keys;
+    std::shuffle(keys, keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+      bulk_keys.insert(keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+    // step 2 operations, operations_num
+    operations_num = init_table_size; // insert same as init_table_size
+    operations.reserve(operations_num);
+    std::shuffle(backup_keys, backup_keys + table_size, gen);
+    for (size_t i = 0; i < operations_num; ++i) {
+      if (bulk_keys.find(backup_keys[i]) == bulk_keys.end()) {
+        operations.push_back(
+            std::pair<Operation, KEY_TYPE>(INSERT, backup_keys[i]));
+      }
+    }
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted insert
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = 2 * init_table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr1 = nullptr;
+    KEY_TYPE *sample_ptr2 = nullptr;
+    if (sample_distribution == "uniform") {
+      sample_ptr1 = get_search_keys(&keys[0], table_size, init_table_size,
+                                    &random_seed); // random read
+      sample_ptr2 =
+          get_search_keys(&backup_keys[0], table_size, init_table_size,
+                          &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr1 = get_search_keys_zipf(&keys[0], table_size, init_table_size,
+                                         &random_seed); // random read
+      sample_ptr2 =
+          get_search_keys_zipf(&backup_keys[0], table_size, init_table_size,
+                               &random_seed); // random read
+    }
+    for (size_t i = 0; i < init_table_size; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr1[i]));
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr2[i]));
+    }
+    delete[] sample_ptr1;
+    delete[] sample_ptr2;
+  }
+  // two dataset, uniform bulkload, unifrom/shuffled insert
+  void generate_dataset_case8222() {
+    INVARIANT(backup_keys!=nullptr);
+    std::unordered_set<KEY_TYPE> bulk_keys;
+    std::shuffle(keys, keys + table_size, gen);
+    // step 1 init_keys, init_key_values
+    init_table_size = init_table_ratio * table_size;
+    init_keys.resize(init_table_size);
+    // 从最左端开始，然后取init_table_size个key
+    size_t start_pos = 0;
+    for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
+      init_keys[i - start_pos] = (keys[i]);
+      bulk_keys.insert(keys[i]);
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+    // step 2 operations, operations_num
+    operations_num = init_table_size; // insert same as init_table_size
+    operations.reserve(operations_num);
+    std::shuffle(backup_keys, backup_keys + table_size, gen);
+    for (size_t i = 0; i < operations_num; ++i) {
+      if (bulk_keys.find(backup_keys[i]) == bulk_keys.end()) {
+        operations.push_back(
+            std::pair<Operation, KEY_TYPE>(INSERT, backup_keys[i]));
+      }
+    }
+
+    // step 3 backup_operations, backup_operations_num
+    backup_operations_num = 2 * init_table_size;
+    backup_operations.reserve(backup_operations_num);
+    KEY_TYPE *sample_ptr1 = nullptr;
+    KEY_TYPE *sample_ptr2 = nullptr;
+    if (sample_distribution == "uniform") {
+      sample_ptr1 = get_search_keys(&keys[0], table_size, init_table_size,
+                                    &random_seed); // random read
+      sample_ptr2 =
+          get_search_keys(&backup_keys[0], table_size, init_table_size,
+                          &random_seed); // random read
+    } else if (sample_distribution == "zipf") {
+      sample_ptr1 = get_search_keys_zipf(&keys[0], table_size, init_table_size,
+                                         &random_seed); // random read
+      sample_ptr2 =
+          get_search_keys_zipf(&backup_keys[0], table_size, init_table_size,
+                               &random_seed); // random read
+    }
+    for (size_t i = 0; i < init_table_size; ++i) {
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr1[i]));
+      backup_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(READ, sample_ptr2[i]));
+    }
+    delete[] sample_ptr1;
+    delete[] sample_ptr2;
+  }
 
   /*
   // ramdom substring + sampling
@@ -1976,9 +2114,9 @@ the same variable "table_size" when loading
           pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
     } else if (preload_suite == 2) { // use the same dataset to preload
       preload_keys_file_path = keys_file_path;
-    } else if (preload_suite == 3) {  // use sampled type domain to preload
+    } else if (preload_suite == 3) { // use sampled type domain to preload
       preload_keys_file_path = keys_file_path;
-    } else if (preload_suite == 4) {  // use sampled dataset domain to preload
+    } else if (preload_suite == 4) { // use sampled dataset domain to preload
       preload_keys_file_path = keys_file_path;
     } else {
       assert(false);
@@ -2002,10 +2140,7 @@ the same variable "table_size" when loading
     /// generate custom suite keys and operations
     ///
     keys = load_keys_inner(keys_file_path);
-    // if (test_suite == 8888 /*for mixed dataset*/) {
-    //   INVARIANT(!backup_keys_file_path.empty());
-    //   backup_keys = load_keys_inner(backup_keys_file_path);
-    // }
+
     generate_dataset_inner();
     // transform init keys into init insert opertions and recover init key
     // values
@@ -2116,7 +2251,7 @@ the same variable "table_size" when loading
   }
 
   void generate_preload_dataset_case1_2() { // use <uniform sampling, bulkload
-                                          // size> to preload
+                                            // size> to preload
     std::shuffle(preload_keys, preload_keys + table_size, preload_gen);
     init_table_size =
         init_table_ratio * table_size; // the same proportion as bulkload size
@@ -2159,11 +2294,13 @@ the same variable "table_size" when loading
     COUT_VAR(init_keys.size());
   }
 
-  void generate_preload_dataset_case4() { // use sampled dataset domain to preload
+  void
+  generate_preload_dataset_case4() { // use sampled dataset domain to preload
     init_table_size =
         init_table_ratio * table_size; // the same proportion as bulkload size
     init_keys.resize(init_table_size);
-    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) / init_table_size;
+    size_t gap_size =
+        (preload_keys[table_size - 1] - preload_keys[0]) / init_table_size;
     COUT_VAR(gap_size);
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = 0; i < init_table_size; i++) {

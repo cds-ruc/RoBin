@@ -34,6 +34,12 @@ def main():
         choices=["linear", "covid", "fb", "fb-1", "osm"],
         help="dataset name",
     )
+    parser.add_argument(
+        "--dataset2",
+        required=False,
+        choices=["linear", "covid", "fb", "fb-1", "osm"],
+        help="dataset2 name",
+    )
     parser.add_argument("--concurrency", required=True, default=1, help="concurrency")
     parser.add_argument(
         "--sampling_method",
@@ -76,8 +82,12 @@ def main():
     if args.sampling_method == "uniform":
         if args.insert_pattern == "sorted":
             test_suite = 21
+            if args.dataset2 is not None:
+                test_suite = 8221
         elif args.insert_pattern == "shuffled":
             test_suite = 22
+            if args.dataset2 is not None:
+                test_suite = 8222
         else:
             print(f"Unknown insert pattern: {args.insert_pattern}")
             sys.exit(1)
@@ -109,12 +119,16 @@ def main():
         args.taskset = ""
     else:
         args.taskset = "taskset -c " + args.taskset
+    
+    keys_path2_arg=""
+    if args.dataset2 is not None:
+        keys_path2_arg = f"--backup_keys_file=datasets/{args.dataset2}"
 
     hardness_statistic_arg = ""
     if args.hardness_statistic:
         hardness_statistic_arg = " --dataset_statistic=true"
 
-    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}"
+    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}"
     print(f"Running command: {command}")
     try:
         proc = subprocess.Popen(command.split())
