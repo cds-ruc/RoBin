@@ -9,8 +9,8 @@ Robin is a **Ro**bustness **B**enchmark for range **in**dexes (especially for up
 
 ## Notice
 
-1. We only modify the Face dataset to support experiments on ALEX. Because the Face dataset contains the numeric_limit<uint64_t>, ALEX uses this as a sential for easing implementation. Therefore, we shifted all fb keys by minus one as **Face-1** dataset for testing ALEX only.
-2. We modify the LIPP's hyperparameter [MAX_DEPTH](https://github.com/cds-ruc/IndexRepo/blob/b237911cb31fc0a94c1b1911b0fbcadb8fd0870f/src/core/lipp.h#L1088) to ensure it can successfully run all the test cases (otherwise it will crash due to its assertion at runtime).
+1. Face dataset contains the numeric_limit<uint64_t>, Some indexes may use this as a sential for easing implementation. Therefore, we shifted all fb keys by minus **one** as **Face-1** dataset.
+2. We modify the LIPP/SALI's hyperparameter [MAX_DEPTH](https://github.com/cds-ruc/IndexRepo/blob/b237911cb31fc0a94c1b1911b0fbcadb8fd0870f/src/core/lipp.h#L1088) to ensure it can successfully run all the test cases (otherwise it will crash due to its assertion at runtime).
 3. We modify the bulkload process of STX B+tree to ensure its node half filled (load factor = 0.5) after bulkloaading, which aligns its insertions and splits to show its performance robustness.
 4. Other parameters of all indexes are the same as their original implementations.
 5. All of our tested index implementations can be found in [this repo](https://github.com/cds-ruc/IndexRepo). Each branch is corresponding to one index.
