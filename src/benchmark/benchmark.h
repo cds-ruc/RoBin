@@ -2252,22 +2252,21 @@ the same variable "table_size" when loading
 
   void run_preload_custom_suite_aug() {
     assert(preload_suite > 10);
-    preload_suite -= 10;
 
     /// generate preload keys and operations
     ///
     // Here, we don't reuse keys[] to avoid the influence of gen
-    if (preload_suite == 1) { // use osm to preload
+    if (preload_suite == 11) { // use osm to preload
       preload_keys_file_path = keys_file_path;
       size_t pos = preload_keys_file_path.rfind(
           '/'); // assert osm is in the same directory
       preload_keys_file_path.replace(
           pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
-    } else if (preload_suite == 2) { // use the same dataset to preload
+    } else if (preload_suite == 12) { // use the same dataset to preload
       preload_keys_file_path = keys_file_path;
-    } else if (preload_suite == 3) {  // use sampled type domain to preload
+    } else if (preload_suite == 13) {  // use sampled type domain to preload
       preload_keys_file_path = keys_file_path;
-    } else if (preload_suite == 4) {  // use sampled dataset domain to preload
+    } else if (preload_suite == 14) {  // use sampled dataset domain to preload
       preload_keys_file_path = keys_file_path;
     } else {
       assert(false);
@@ -2456,6 +2455,22 @@ the same variable "table_size" when loading
       break;
     };
     case 4: {
+      generate_preload_dataset_case4();
+      break;
+    };
+    case 11: {
+      generate_preload_dataset_case1_2();
+      break;
+    };
+    case 12: {
+      generate_preload_dataset_case1_2();
+      break;
+    };
+    case 13: {
+      generate_preload_dataset_case3();
+      break;
+    };
+    case 14: {
       generate_preload_dataset_case4();
       break;
     };
