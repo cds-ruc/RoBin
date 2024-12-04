@@ -2268,6 +2268,8 @@ the same variable "table_size" when loading
       preload_keys_file_path = keys_file_path;
     } else if (preload_suite == 14) {  // use sampled dataset domain to preload
       preload_keys_file_path = keys_file_path;
+    } else if (preload_suite == 23) {
+      preload_keys_file_path = keys_file_path;
     } else {
       assert(false);
       return;
@@ -2423,7 +2425,7 @@ the same variable "table_size" when loading
         init_table_ratio * table_size; // the same proportion as bulkload size
     init_keys.resize(init_table_size);
     size_t gap_size =
-        (preload_keys[table_size - 1] - preload_keys[0]) / init_table_size;
+        (preload_keys[table_size - 1] - preload_keys[0]) / (init_table_size - 1);
     COUT_VAR(gap_size);
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = 0; i < init_table_size; i++) {
