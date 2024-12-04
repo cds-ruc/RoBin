@@ -1,3 +1,5 @@
+// ref from https://github.com/efficient/mica/blob/master/src/zipf.h
+
 // Copyright 2014 Carnegie Mellon University
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

@@ -1324,17 +1324,12 @@ public:
     init_keys.resize(table_size); // 临时给大
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
     std::unordered_set<uint64_t> s;      // 这里面存放的是key的pos
-    std::map<uint64_t, uint64_t> record; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
     for (int i = 0; i < sample_round; i++) {
       int64_t tmp = zipf_gen.next();
-      record[tmp]++;
       s.insert(tmp);
-    }
-    for (auto x : record) {
-      std::cout << x.first << " " << x.second << "\n";
     }
     init_table_size = s.size();
     init_table_ratio = double(init_table_size) / table_size;

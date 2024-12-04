@@ -44,10 +44,11 @@ def main():
     parser.add_argument(
         "--sampling_method",
         required=True,
-        choices=["uniform", "segmented", "full"],
+        choices=["uniform", "segmented", "zipfian", "full"],
         help="sampling method",
     )
-    parser.add_argument("--bulkload_size", required=True, help="bulkload size")
+    parser.add_argument("--bulkload_size", required=False, default=0, help="bulkload size")
+    parser.add_argument("--sampling_round", required=False, help="sampling round")
     parser.add_argument(
         "--insert_pattern",
         required=True,
@@ -103,6 +104,14 @@ def main():
             sys.exit(1)
         if args.mixed_rw:
             test_suite *= 10
+    elif args.sampling_method == "zipfian":
+        if args.insert_pattern == "sorted":
+            test_suite = 81
+        elif args.insert_pattern == "shuffled":
+            test_suite = 82
+        else:
+            print(f"Unknown insert pattern: {args.insert_pattern}")
+            sys.exit(1)
     elif args.sampling_method == "full":
         if args.bulkload_size != "200000000" or args.insert_pattern != "sorted":
             print(
@@ -128,7 +137,7 @@ def main():
     if args.hardness_statistic:
         hardness_statistic_arg = " --dataset_statistic=true"
 
-    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index}"
+    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --sampling_round={args.sampling_round} --thread_num={args.concurrency} --index={args.index}"
     print(f"Running command: {command}")
     try:
         proc = subprocess.Popen(command.split())
