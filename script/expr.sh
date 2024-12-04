@@ -268,5 +268,55 @@ function test_preload_single_thread() {
   done
 }
 
-test_shift_multi_thread;
-# test_preload_single_thread
+function test_zipfian_mitigation_single_thread() {
+  index_options=("btree" "art" "alex" "lipp" "dytis" "dili")
+  sampling_method_options=("zipfian")
+  sampling_round_options=("10000000" "20000000" "50000000" "100000000" "200000000")
+  # Iterate over all combinations of parameters
+  for index in "${index_options[@]}"; do
+    for dataset in "${dataset_options[@]}"; do
+      for sampling_method in "${sampling_method_options[@]}"; do
+        for sampling_round in "${sampling_round_options[@]}"; do
+          for insert_pattern in "${insert_pattern_options[@]}"; do
+            for concurrency in "${concurrency_options[@]}"; do
+              # Construct the base command
+              cmd="python3 run.py --index=$index --dataset=$dataset --concurrency=$concurrency"
+              
+              # Add optional parameters
+              if [ -n "$sampling_method" ]; then
+                cmd+=" --sampling_method=$sampling_method"
+              fi
+              if [ -n "$sampling_round" ]; then
+                cmd+=" --sampling_round=$sampling_round"
+              fi
+              if [ -n "$insert_pattern" ]; then
+                cmd+=" --insert_pattern=$insert_pattern"
+              fi
+              
+              # Determine taskset CPUs based on concurrency, starting from CPU 2
+              if (( concurrency > 0 )); then
+                # Generate a comma-separated list from 2 up to (2 + concurrency - 1)
+                if (( numanode == 0 )); then
+                  end_cpu=$((2 + concurrency - 1))
+                  cmd+=" --taskset=2-$end_cpu"
+                else
+                  end_cpu=$((20 + concurrency - 1))
+                  cmd+=" --taskset=20-$end_cpu"
+                fi
+              fi
+              
+              # Run the command 3 times
+              for epoch in $(seq 1 $epoch_limit); do
+                echo "Running command (epoch $epoch): $cmd"
+                eval "$cmd >> run.log"
+              done
+            done
+          done
+        done
+      done
+    done
+  done
+}
+# test_shift_multi_thread;
+# test_preload_single_thread;
+test_zipfian_mitigation_single_thread;
