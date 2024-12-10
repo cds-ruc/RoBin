@@ -2257,16 +2257,11 @@ the same variable "table_size" when loading
           '/'); // assert osm is in the same directory
       preload_keys_file_path.replace(
           pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
-    } else if (preload_suite == 12) { // use the same dataset to preload
-      preload_keys_file_path = keys_file_path;
     } else {
-      preload_keys_file_path = "";
+      preload_keys_file_path = keys_file_path;
     }
-
-    if (preload_suite == 11 || preload_suite == 12) {
-      COUT_VAR(preload_keys_file_path);
-      preload_keys = load_keys_inner(preload_keys_file_path);
-    }
+    COUT_VAR(preload_keys_file_path);
+    preload_keys = load_keys_inner(preload_keys_file_path);
     generate_preload_dataset_inner();
     // reserve preload init key values
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *preload_init_key_values =
