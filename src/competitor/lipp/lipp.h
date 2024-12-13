@@ -32,6 +32,7 @@ public:
     if (s == "insert") {
       lipp.print_depth_stats(s);
       lipp.print_hist_model_stats(s);
+      lipp.print_smo_stats(s);
     }
     return ;
   }
