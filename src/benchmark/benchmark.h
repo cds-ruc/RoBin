@@ -2516,6 +2516,50 @@ the same variable "table_size" when loading
     COUT_VAR(init_keys.size());
   }
 
+  void generate_preload_dataset_case43() { // use sampled type domain to preload
+    init_table_size =
+        0.001 * init_table_ratio * table_size; // 0.001 proportion as bulkload size
+    init_keys.resize(init_table_size);
+    size_t gap_size = UINT64_MAX / (init_table_size - 1);
+    COUT_VAR(gap_size);
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = 0; i < init_table_size; i++) {
+      init_keys[i] = i * gap_size;
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
+  void
+  generate_preload_dataset_case44() { // use sampled dataset domain to preload
+    init_table_size =
+        0.001 * init_table_ratio * table_size; // 0.001 proportion as bulkload size
+    init_keys.resize(init_table_size);
+    size_t gap_size =
+        (preload_keys[table_size - 1] - preload_keys[0]) / (init_table_size - 1);
+    COUT_VAR(gap_size);
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = 0; i < init_table_size; i++) {
+      init_keys[i] = preload_keys[0] + i * gap_size;
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
   void generate_preload_dataset_inner() {
     switch (preload_suite) {
     case 1: {
@@ -2564,6 +2608,14 @@ the same variable "table_size" when loading
     }
     case 34: {
       generate_preload_dataset_case34();
+      break;
+    }
+    case 43: {
+      generate_preload_dataset_case43();
+      break;
+    }
+    case 44: {
+      generate_preload_dataset_case44();
       break;
     }
     default:
