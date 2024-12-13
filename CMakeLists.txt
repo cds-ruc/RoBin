@@ -36,6 +36,11 @@ if(PROFILING)
     add_definitions(-DPROFILING)
 endif()
 
+if(ROOT_PROFILING)
+    message("Compiling for root profiling")
+    add_definitions(-DROOT_PROFILING)
+endif()
+
 # 定义microbench可执行文件
 add_executable(microbench ${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/microbench.cpp)
 
