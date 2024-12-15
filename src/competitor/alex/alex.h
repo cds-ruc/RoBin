@@ -29,7 +29,6 @@ public:
     if (s == "bulkload") {
       index.print_depth_stats(s);
       index.print_hist_model_stats(s);
-      index.print_smo_stats(s);
     }
     if (s == "insert") {
       index.print_depth_stats(s);
