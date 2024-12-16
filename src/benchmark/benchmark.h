@@ -3317,8 +3317,7 @@ public:
         run_preload_custom_suite_aug();
       } else if (preload_suite == 100) {
         run_preload_custom_suite_opt();
-      }
-       else {
+      } else {
         run_custom_suite();
       }
       return;
