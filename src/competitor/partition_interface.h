@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <oneapi/tbb/parallel_sort.h>
+#include "tbb/parallel_sort.h"
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 class partitionedIndexInterface final
@@ -46,6 +46,14 @@ public:
       } else if (index_type == "lipp") {
         for (size_t i = 0; i < partition_num; i++) {
           index_[i] = new LIPPInterface<KEY_TYPE, PAYLOAD_TYPE>;
+        }
+      } else if (index_type == "dili") {
+        for (size_t i = 0; i < partition_num; i++) {
+          index_[i] = new diliInterface<KEY_TYPE, PAYLOAD_TYPE>;
+        }
+      } else if (index_type == "dytis") {
+        for (size_t i = 0; i < partition_num; i++) {
+          index_[i] = new dytisInterface<KEY_TYPE, PAYLOAD_TYPE>;
         }
       } else {
         std::cout << "Could not find a matching index called " << index_type
@@ -127,7 +135,7 @@ public:
     // call before bulk_load
     if (!use_model_) {
       KEY_TYPE *copied_keys = new KEY_TYPE[200000000];
-      #pragma omp parallel for
+#pragma omp parallel for
       for (size_t i = 0; i < 200000000; i++) {
         copied_keys[i] = ((KEY_TYPE *)param->keys)[i];
       }
@@ -143,7 +151,7 @@ public:
       for (size_t i = 0; i < partition_num_; i++) {
         index_[i]->init(param);
       }
-      delete []copied_keys;
+      delete[] copied_keys;
     } else {
       // TODO: load model file
     }
