@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <jemalloc/jemalloc.h>
+#include <ostream>
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +45,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   size_t operations_num;
   long long table_size = -1;
   size_t init_table_size;
+  size_t partition_num;
   int sample_round;
   double init_table_ratio;
   double del_table_ratio;
@@ -66,6 +68,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   bool data_shift = false;
   int test_suite = 0;
   int preload_suite = 0;
+  std::string partition_method;
   bool dump_bulkload = false;
   double sigma_ratio = 0.5;
   double zipfian_constant = 0.99;
@@ -1323,7 +1326,7 @@ public:
     // step 1 init_keys, init_key_values
     init_keys.resize(table_size); // 临时给大
     // 按照zipf采样，采一批数据到init_keys里面去，要搞个set标记一下哪些被采过了
-    std::unordered_set<uint64_t> s;      // 这里面存放的是key的pos
+    std::unordered_set<uint64_t> s; // 这里面存放的是key的pos
     // 按照zipf 采若干轮到s里,，zipf的key就是从0到table_size-1
     ZipfianGenerator zipf_gen(table_size, zipfian_constant, random_seed);
     COUT_VAR(zipf_gen.get_state().theta);
@@ -1753,7 +1756,7 @@ public:
   }
   // two dataset, uniform bulkload, unifrom/sorted insert
   void generate_dataset_case8221() {
-    INVARIANT(backup_keys!=nullptr);
+    INVARIANT(backup_keys != nullptr);
     std::unordered_set<KEY_TYPE> bulk_keys;
     std::shuffle(keys, keys + table_size, gen);
     // step 1 init_keys, init_key_values
@@ -1815,7 +1818,7 @@ public:
   }
   // two dataset, uniform bulkload, unifrom/shuffled insert
   void generate_dataset_case8222() {
-    INVARIANT(backup_keys!=nullptr);
+    INVARIANT(backup_keys != nullptr);
     std::unordered_set<KEY_TYPE> bulk_keys;
     std::shuffle(keys, keys + table_size, gen);
     // step 1 init_keys, init_key_values
@@ -2273,7 +2276,8 @@ the same variable "table_size" when loading
     keys = load_keys_inner(keys_file_path);
     generate_dataset_inner();
     // reserve bulkload init key values
-    std::pair<KEY_TYPE, PAYLOAD_TYPE> *bulkload_init_key_values = init_key_values;
+    std::pair<KEY_TYPE, PAYLOAD_TYPE> *bulkload_init_key_values =
+        init_key_values;
     std::vector<KEY_TYPE> bulkload_init_keys = init_keys;
     // merge preload and bulkload init keys
     std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>> merge_init_key_values;
@@ -2301,8 +2305,10 @@ the same variable "table_size" when loading
     // reserve preload delete operations
     std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
     for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      if (bulkload_init_keys_set.find(preload_init_keys[i]) == bulkload_init_keys_set.end()) {
-        preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
+      if (bulkload_init_keys_set.find(preload_init_keys[i]) ==
+          bulkload_init_keys_set.end()) {
+        preload_delete_operations.push_back(
+            std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
       }
     }
     size_t preload_delete_operations_num = preload_delete_operations.size();
@@ -2526,8 +2532,8 @@ the same variable "table_size" when loading
     init_table_size =
         init_table_ratio * table_size; // the same proportion as bulkload size
     init_keys.resize(init_table_size);
-    size_t gap_size =
-        (preload_keys[table_size - 1] - preload_keys[0]) / (init_table_size - 1);
+    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) /
+                      (init_table_size - 1);
     COUT_VAR(gap_size);
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = 0; i < init_table_size; i++) {
@@ -2570,8 +2576,8 @@ the same variable "table_size" when loading
     init_table_size =
         0.1 * init_table_ratio * table_size; // 0.1 proportion as bulkload size
     init_keys.resize(init_table_size);
-    size_t gap_size =
-        (preload_keys[table_size - 1] - preload_keys[0]) / (init_table_size - 1);
+    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) /
+                      (init_table_size - 1);
     COUT_VAR(gap_size);
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = 0; i < init_table_size; i++) {
@@ -2589,8 +2595,8 @@ the same variable "table_size" when loading
   }
 
   void generate_preload_dataset_case33() { // use sampled type domain to preload
-    init_table_size =
-        0.01 * init_table_ratio * table_size; // 0.01 proportion as bulkload size
+    init_table_size = 0.01 * init_table_ratio *
+                      table_size; // 0.01 proportion as bulkload size
     init_keys.resize(init_table_size);
     size_t gap_size = UINT64_MAX / (init_table_size - 1);
     COUT_VAR(gap_size);
@@ -2611,11 +2617,11 @@ the same variable "table_size" when loading
 
   void
   generate_preload_dataset_case34() { // use sampled dataset domain to preload
-    init_table_size =
-        0.01 * init_table_ratio * table_size; // 0.01 proportion as bulkload size
+    init_table_size = 0.01 * init_table_ratio *
+                      table_size; // 0.01 proportion as bulkload size
     init_keys.resize(init_table_size);
-    size_t gap_size =
-        (preload_keys[table_size - 1] - preload_keys[0]) / (init_table_size - 1);
+    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) /
+                      (init_table_size - 1);
     COUT_VAR(gap_size);
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = 0; i < init_table_size; i++) {
@@ -2633,8 +2639,8 @@ the same variable "table_size" when loading
   }
 
   void generate_preload_dataset_case43() { // use sampled type domain to preload
-    init_table_size =
-        0.001 * init_table_ratio * table_size; // 0.001 proportion as bulkload size
+    init_table_size = 0.001 * init_table_ratio *
+                      table_size; // 0.001 proportion as bulkload size
     init_keys.resize(init_table_size);
     size_t gap_size = UINT64_MAX / (init_table_size - 1);
     COUT_VAR(gap_size);
@@ -2655,11 +2661,11 @@ the same variable "table_size" when loading
 
   void
   generate_preload_dataset_case44() { // use sampled dataset domain to preload
-    init_table_size =
-        0.001 * init_table_ratio * table_size; // 0.001 proportion as bulkload size
+    init_table_size = 0.001 * init_table_ratio *
+                      table_size; // 0.001 proportion as bulkload size
     init_keys.resize(init_table_size);
-    size_t gap_size =
-        (preload_keys[table_size - 1] - preload_keys[0]) / (init_table_size - 1);
+    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) /
+                      (init_table_size - 1);
     COUT_VAR(gap_size);
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = 0; i < init_table_size; i++) {
@@ -2815,10 +2821,11 @@ public:
   }
 
   inline void prepare(index_t *&index, const KEY_TYPE *keys) {
-    index = get_index<KEY_TYPE, PAYLOAD_TYPE>(index_type);
+    index = get_index<KEY_TYPE, PAYLOAD_TYPE>(index_type, partition_method,
+                                              partition_num);
 
     // initilize Index (sort keys first)
-    Param param = Param(thread_num, 0);
+    Param param = Param(thread_num, 0, keys);
     index->init(&param);
 
     if (dump_bulkload) {
@@ -2889,6 +2896,7 @@ public:
     scan_num = stoi(get_with_default(flags, "scan_num", "100"));
     operations_num = stoi(
         get_with_default(flags, "operations_num", "1000000000")); // required
+    partition_num = stoi(get_with_default(flags, "partition_num", "1"));
     table_size = stoi(get_with_default(flags, "table_size", "-1"));
     init_table_ratio = stod(get_with_default(flags, "init_table_ratio", "0.5"));
     del_table_ratio = stod(get_with_default(flags, "del_table_ratio", "0.5"));
@@ -2916,6 +2924,8 @@ public:
     zipfian_constant =
         stod(get_with_default(flags, "zipfian_constant", "0.99"));
     preload_suite = stoi(get_with_default(flags, "preload_suite", "0"));
+    partition_method =
+        get_with_default(flags, "partition_method", "direct"); // range or model
     COUT_THIS("[micro] Read:Insert:Update:Scan:Delete= "
               << read_ratio << ":" << insert_ratio << ":" << update_ratio << ":"
               << scan_ratio << ":" << delete_ratio);
@@ -3226,7 +3236,13 @@ public:
                ",";
       ofile << "test_suite"
                ",";
-      ofile << "preload_suite" << std::endl;
+      ofile << "preload_suite"
+               ",";
+      ofile << "partition_method"
+               ",";
+      ofile << "partition_num"
+               ","
+            << std::endl;
     }
 
     std::ofstream ofile;
@@ -3276,7 +3292,9 @@ public:
     ofile << error_bound << ",";
     ofile << table_size << ",";
     ofile << test_suite << ",";
-    ofile << preload_suite << std::endl;
+    ofile << preload_suite << ",";
+    ofile << partition_method << ",";
+    ofile << partition_num << std::endl;
     ofile.close();
 
     if (clear_flag)

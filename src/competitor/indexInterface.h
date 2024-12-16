@@ -7,9 +7,11 @@
 struct Param { // for xindex
   size_t worker_num;
   uint32_t thread_id;
-
+  const void *keys;
   Param(size_t worker_num, uint32_t thread_id)
       : worker_num(worker_num), thread_id(thread_id) {}
+  Param(size_t worker_num, uint32_t thread_id, const void *keys)
+      : worker_num(worker_num), thread_id(thread_id), keys(keys) {}
 };
 
 struct BaseCompare {
