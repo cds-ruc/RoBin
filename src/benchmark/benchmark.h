@@ -2397,22 +2397,18 @@ the same variable "table_size" when loading
     // reserve bulkload init key values
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *bulkload_init_key_values = init_key_values;
     std::vector<KEY_TYPE> bulkload_init_keys = init_keys;
-    // merge preload and bulkload init keys
+    // choose preload init keys that are not in bulkload init keys
     std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>> merge_init_key_values;
     std::vector<KEY_TYPE> merge_init_keys;
-    std::unordered_set<KEY_TYPE> preload_init_keys_set;
     std::unordered_set<KEY_TYPE> bulkload_init_keys_set;
-    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      preload_init_keys_set.insert(preload_init_keys[i]);
-      // merge_init_keys.push_back(preload_init_keys[i]);
-      // merge_init_key_values.push_back(preload_init_key_values[i]);
-    }
     for (size_t i = 0; i < bulkload_init_keys.size(); ++i) {
       bulkload_init_keys_set.insert(bulkload_init_keys[i]);
-      if (preload_init_keys_set.find(bulkload_init_keys[i]) ==
-          preload_init_keys_set.end()) {
-        merge_init_keys.push_back(bulkload_init_keys[i]);
-        merge_init_key_values.push_back(bulkload_init_key_values[i]);
+    }
+    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
+      if (bulkload_init_keys_set.find(preload_init_keys[i]) ==
+          bulkload_init_keys_set.end()) {
+        merge_init_keys.push_back(preload_init_keys[i]);
+        merge_init_key_values.push_back(preload_init_key_values[i]);
       }
     }
     std::sort(merge_init_key_values.begin(), merge_init_key_values.end());
@@ -2420,15 +2416,6 @@ the same variable "table_size" when loading
     init_key_values = &merge_init_key_values[0];
     init_keys = merge_init_keys;
     COUT_VAR(merge_init_keys.size());
-    // reserve preload delete operations
-    std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
-    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      if (bulkload_init_keys_set.find(preload_init_keys[i]) == bulkload_init_keys_set.end()) {
-        preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
-      }
-    }
-    size_t preload_delete_operations_num = preload_delete_operations.size();
-    COUT_VAR(preload_delete_operations_num);
     // reserve insert operations
     std::vector<std::pair<Operation, KEY_TYPE>> insert_operations;
     size_t insert_operations_num;
@@ -2445,16 +2432,6 @@ the same variable "table_size" when loading
         index_t *index;
         // preload - bulkload
         prepare(index, &merge_init_keys[0]);
-        // preload - delete
-        std::swap(operations, preload_delete_operations);
-        std::swap(operations_num, preload_delete_operations_num);
-        read_ratio = 0.0;
-        insert_ratio = 0.0;
-        delete_ratio = 1.0;
-        run(index);
-#ifdef PROFILING
-        index->print_stats("preload (bulkload & delete)");
-#endif
         // insert - insert
         std::swap(operations, insert_operations);
         std::swap(operations_num, insert_operations_num);
