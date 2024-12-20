@@ -2395,7 +2395,8 @@ the same variable "table_size" when loading
     keys = load_keys_inner(keys_file_path);
     generate_dataset_inner();
     // reserve bulkload init key values
-    std::pair<KEY_TYPE, PAYLOAD_TYPE> *bulkload_init_key_values = init_key_values;
+    std::pair<KEY_TYPE, PAYLOAD_TYPE> *bulkload_init_key_values =
+        init_key_values;
     std::vector<KEY_TYPE> bulkload_init_keys = init_keys;
     // merge preload and bulkload init keys
     std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>> merge_init_key_values;
@@ -2423,8 +2424,10 @@ the same variable "table_size" when loading
     // reserve preload delete operations
     std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
     for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      if (bulkload_init_keys_set.find(preload_init_keys[i]) == bulkload_init_keys_set.end()) {
-        preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
+      if (bulkload_init_keys_set.find(preload_init_keys[i]) ==
+          bulkload_init_keys_set.end()) {
+        preload_delete_operations.push_back(
+            std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
       }
     }
     size_t preload_delete_operations_num = preload_delete_operations.size();
@@ -2708,42 +2711,42 @@ the same variable "table_size" when loading
       generate_preload_dataset_case1_2();
       break;
     }
-    case 13: 
+    case 13:
     case 113: {
       generate_preload_dataset_case3();
       break;
     }
-    case 14: 
+    case 14:
     case 114: {
       generate_preload_dataset_case4();
       break;
     }
-    case 23: 
+    case 23:
     case 123: {
       generate_preload_dataset_case23();
       break;
     }
-    case 24: 
+    case 24:
     case 124: {
       generate_preload_dataset_case24();
       break;
     }
-    case 33: 
+    case 33:
     case 133: {
       generate_preload_dataset_case33();
       break;
     }
-    case 34: 
+    case 34:
     case 134: {
       generate_preload_dataset_case34();
       break;
     }
-    case 43: 
+    case 43:
     case 143: {
       generate_preload_dataset_case43();
       break;
     }
-    case 44: 
+    case 44:
     case 144: {
       generate_preload_dataset_case44();
       break;
@@ -2825,7 +2828,10 @@ public:
                                               partition_num);
 
     // initilize Index (sort keys first)
-    Param param = Param(thread_num, 0, keys);
+    // std::string dataset_name= keys_file_path last part
+    std::string dataset_name =
+        keys_file_path.substr(keys_file_path.find_last_of("/") + 1);
+    Param param = Param(thread_num, 0, keys, dataset_name, index_type);
     index->init(&param);
 
     if (dump_bulkload) {

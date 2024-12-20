@@ -8,10 +8,18 @@ struct Param { // for xindex
   size_t worker_num;
   uint32_t thread_id;
   const void *keys;
+  std::string dataset_name;
+  int test_suite;
+  double init_table_ratio;
+  std::string index_name;
   Param(size_t worker_num, uint32_t thread_id)
       : worker_num(worker_num), thread_id(thread_id) {}
   Param(size_t worker_num, uint32_t thread_id, const void *keys)
       : worker_num(worker_num), thread_id(thread_id), keys(keys) {}
+  Param(size_t worker_num, uint32_t thread_id, const void *keys,
+        std::string dataset_name, std::string index_name)
+      : worker_num(worker_num), thread_id(thread_id), keys(keys),
+        dataset_name(dataset_name), index_name(index_name) {}
 };
 
 struct BaseCompare {
