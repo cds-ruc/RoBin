@@ -265,7 +265,7 @@ public:
   long long memory_consumption() { return 0; }
 
 #ifdef PROFILING
-  void print_stats(std::string s);
+  void print_stats(std::string s) {}
 #endif
 
 private:

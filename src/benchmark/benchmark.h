@@ -2297,7 +2297,7 @@ the same variable "table_size" when loading
         merge_init_key_values.push_back(bulkload_init_key_values[i]);
       }
     }
-    std::sort(merge_init_key_values.begin(), merge_init_key_values.end());
+    tbb::parallel_sort(merge_init_key_values.begin(), merge_init_key_values.end());
     // recover init key values
     init_key_values = &merge_init_key_values[0];
     init_keys = merge_init_keys;
@@ -2367,28 +2367,8 @@ the same variable "table_size" when loading
     }
   }
 
-  void run_preload_custom_suite_base() {
-    assert(preload_suite > 100);
-
-    /// generate preload keys and operations
-    ///
-    // Here, we don't reuse keys[] to avoid the influence of gen
-    if (preload_suite == 111) { // use osm to preload
-      preload_keys_file_path = keys_file_path;
-      size_t pos = preload_keys_file_path.rfind(
-          '/'); // assert osm is in the same directory
-      preload_keys_file_path.replace(
-          pos + 1, preload_keys_file_path.length() - pos - 1, "osm");
-    } else {
-      preload_keys_file_path = keys_file_path;
-    }
-    COUT_VAR(preload_keys_file_path);
-    preload_keys = load_keys_inner(preload_keys_file_path);
-    generate_preload_dataset_inner();
-    // reserve preload init key values
-    std::pair<KEY_TYPE, PAYLOAD_TYPE> *preload_init_key_values =
-        init_key_values;
-    std::vector<KEY_TYPE> preload_init_keys = init_keys;
+  void run_preload_custom_suite_opt() {
+    assert(preload_suite == 100);
 
     /// generate custom suite keys and operations
     ///
@@ -2398,40 +2378,6 @@ the same variable "table_size" when loading
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *bulkload_init_key_values =
         init_key_values;
     std::vector<KEY_TYPE> bulkload_init_keys = init_keys;
-    // merge preload and bulkload init keys
-    std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>> merge_init_key_values;
-    std::vector<KEY_TYPE> merge_init_keys;
-    std::unordered_set<KEY_TYPE> preload_init_keys_set;
-    std::unordered_set<KEY_TYPE> bulkload_init_keys_set;
-    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      preload_init_keys_set.insert(preload_init_keys[i]);
-      // merge_init_keys.push_back(preload_init_keys[i]);
-      // merge_init_key_values.push_back(preload_init_key_values[i]);
-    }
-    for (size_t i = 0; i < bulkload_init_keys.size(); ++i) {
-      bulkload_init_keys_set.insert(bulkload_init_keys[i]);
-      if (preload_init_keys_set.find(bulkload_init_keys[i]) ==
-          preload_init_keys_set.end()) {
-        merge_init_keys.push_back(bulkload_init_keys[i]);
-        merge_init_key_values.push_back(bulkload_init_key_values[i]);
-      }
-    }
-    std::sort(merge_init_key_values.begin(), merge_init_key_values.end());
-    // recover init key values
-    init_key_values = &merge_init_key_values[0];
-    init_keys = merge_init_keys;
-    COUT_VAR(merge_init_keys.size());
-    // reserve preload delete operations
-    std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
-    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      if (bulkload_init_keys_set.find(preload_init_keys[i]) ==
-          bulkload_init_keys_set.end()) {
-        preload_delete_operations.push_back(
-            std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
-      }
-    }
-    size_t preload_delete_operations_num = preload_delete_operations.size();
-    COUT_VAR(preload_delete_operations_num);
     // reserve insert operations
     std::vector<std::pair<Operation, KEY_TYPE>> insert_operations;
     size_t insert_operations_num;
@@ -2439,6 +2385,51 @@ the same variable "table_size" when loading
     std::swap(operations_num, insert_operations_num);
     COUT_VAR(insert_operations_num);
 
+    /// generate preload keys and operations
+    ///
+    std::vector<KEY_TYPE> remaining_keys;
+    for (size_t i = 0; i < insert_operations_num; ++i) {
+      remaining_keys.push_back(insert_operations[i].second);
+    }
+    tbb::parallel_sort(remaining_keys.begin(), remaining_keys.end());
+    // generate preload init key values
+    std::vector<KEY_TYPE> preload_init_keys;
+    preload_init_keys.resize(init_table_size);  // 1:1 preload as bulkload
+    size_t gap_size = remaining_keys.size() / init_table_size;
+    COUT_VAR(gap_size);
+    for (size_t i = 0; i < init_table_size; ++i) {
+      preload_init_keys[i] = remaining_keys[i * gap_size];
+    }
+    COUT_VAR(preload_init_keys.size());
+    // merge preload and bulkload init keys
+    std::vector<KEY_TYPE> merge_init_keys;
+    std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>> merge_init_key_values;
+    merge_init_keys.reserve(preload_init_keys.size() + bulkload_init_keys.size());
+    merge_init_key_values.resize(preload_init_keys.size() + bulkload_init_keys.size());
+    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
+      merge_init_keys.push_back(preload_init_keys[i]);
+    }
+    for (size_t i = 0; i < bulkload_init_keys.size(); ++i) {
+      merge_init_keys.push_back(bulkload_init_keys[i]);
+    }
+    tbb::parallel_sort(merge_init_keys.begin(), merge_init_keys.end());
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = 0; i < merge_init_keys.size(); i++) {
+      merge_init_key_values[i].first = merge_init_keys[i];
+      merge_init_key_values[i].second = 123456789;
+    }
+    // recover init key values
+    init_key_values = &merge_init_key_values[0];
+    init_keys = merge_init_keys;
+    COUT_VAR(merge_init_keys.size());
+    // reserve preload delete operations
+    std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
+    for (size_t i = 0; i < preload_init_keys.size(); ++i) {
+      preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
+    }
+    size_t preload_delete_operations_num = preload_delete_operations.size();
+    COUT_VAR(preload_delete_operations_num);
+    
     /// run
     ///
     for (auto s : all_index_type) {
@@ -2685,6 +2676,28 @@ the same variable "table_size" when loading
     COUT_VAR(init_keys.size());
   }
 
+  void
+  generate_preload_dataset_case100() { // use sampled remain (i.e. insert) dataset to preload
+    init_table_size = init_table_ratio * table_size; // the same proportion as bulkload size
+    init_keys.resize(init_table_size);
+    size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) /
+                      (init_table_size - 1);
+    COUT_VAR(gap_size);
+#pragma omp parallel for num_threads(thread_num)
+    for (size_t i = 0; i < init_table_size; i++) {
+      init_keys[i] = preload_keys[0] + i * gap_size;
+    }
+    tbb::parallel_sort(init_keys.begin(), init_keys.end());
+    init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
+#pragma omp parallel for num_threads(thread_num)
+    for (int i = 0; i < init_keys.size(); i++) {
+      init_key_values[i].first = init_keys[i];
+      init_key_values[i].second = 123456789;
+    }
+    COUT_VAR(table_size);
+    COUT_VAR(init_keys.size());
+  }
+
   void generate_preload_dataset_inner() {
     switch (preload_suite) {
     case 1: {
@@ -2711,43 +2724,35 @@ the same variable "table_size" when loading
       generate_preload_dataset_case1_2();
       break;
     }
-    case 13:
-    case 113: {
+    case 13: {
       generate_preload_dataset_case3();
       break;
     }
-    case 14:
-    case 114: {
+    case 14: {
       generate_preload_dataset_case4();
       break;
     }
-    case 23:
-    case 123: {
+    case 23: {
       generate_preload_dataset_case23();
       break;
     }
-    case 24:
-    case 124: {
+    case 24: {
       generate_preload_dataset_case24();
       break;
     }
-    case 33:
-    case 133: {
+    case 33: {
       generate_preload_dataset_case33();
       break;
     }
-    case 34:
-    case 134: {
+    case 34: {
       generate_preload_dataset_case34();
       break;
     }
-    case 43:
-    case 143: {
+    case 43: {
       generate_preload_dataset_case43();
       break;
     }
-    case 44:
-    case 144: {
+    case 44: {
       generate_preload_dataset_case44();
       break;
     }
@@ -3313,8 +3318,8 @@ public:
         run_preload_custom_suite();
       } else if (preload_suite > 10 && preload_suite < 100) {
         run_preload_custom_suite_aug();
-      } else if (preload_suite > 100) {
-        run_preload_custom_suite_base();
+      } else if (preload_suite == 100) {
+        run_preload_custom_suite_opt();
       } else {
         run_custom_suite();
       }
