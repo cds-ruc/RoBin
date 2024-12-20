@@ -19,6 +19,8 @@
 #include <cassert>
 #include <cstddef>
 #include <fstream>
+#include <unordered_map>
+#include <vector>
 #include "tbb/parallel_sort.h"
 
 #define ROBIN_BOUND(a, x, b) ((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
@@ -98,22 +100,15 @@ public:
         }
       }
     } else {
+      std::unordered_map<KEY_TYPE, std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>>> partitioned_data;
       for (size_t i = 0; i < num; i++) {
           size_t predicted_idx =
               ROBIN_BOUND(0, key_value[i].first * model_slope_ + model_intercept_,
                           partition_num_ - 1);
-          // move forwards check the same part
-          size_t j = i + 1;
-          while (j < num &&
-                (ROBIN_BOUND(0,
-                            size_t(key_value[j].first * model_slope_ + model_intercept_),
-                            partition_num_ - 1)) == predicted_idx) {
-            j++;
-          }
-          // [i,j) is the same partition
-          index_[predicted_idx]->bulk_load(key_value + i, j - i, param);
-          // std::cout<<"success bulk_load partition "<<predicted_idx<<" start from: "<<i<<" to: "<<j<<std::endl;
-          i = j - 1;
+          partitioned_data[predicted_idx].push_back(key_value[i]);
+      }
+      for (size_t i = 0; i < partition_num_; i++) {
+        index_[i]->bulk_load(partitioned_data[i].data(), partitioned_data[i].size(), param);
       }
     }
   }
@@ -233,17 +228,24 @@ public:
                                  param->dataset_name + "/" +
                                  std::to_string(22) + "/" + std::to_string(0) +
                                  "/" + param->index_name + "_insert_root.log";
+        std::cout<<"model_file: "<<model_file<<endl;
         // read the same file, but the last line
         std::ifstream in(model_file);
         if (!in.is_open()) {
           std::cout << "Could not open model file " << model_file << ".\n";
           exit(0);
         }
-        // read the last line
+        // read the read the last-1 line
+        // 读取倒数第二行
         std::string line;
+        std::vector<std::string> lines;
         while (std::getline(in, line)) {
-          ;
+            lines.push_back(line);
         }
+        if (lines.size() >= 1) {
+            line = lines[lines.size() - 1];
+        }
+
         std::stringstream ss(line);
         // get the 2nd and 3rd value, , split by ','
         std::string temp;
