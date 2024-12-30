@@ -2954,7 +2954,10 @@ public:
                                               partition_num);
 
     // initilize Index (sort keys first)
-    Param param = Param(thread_num, 0, keys);
+    // std::string dataset_name= keys_file_path last part
+    std::string dataset_name =
+        keys_file_path.substr(keys_file_path.find_last_of("/") + 1);
+    Param param = Param(thread_num, 0, keys, dataset_name, index_type);
     index->init(&param);
 
     if (dump_bulkload) {

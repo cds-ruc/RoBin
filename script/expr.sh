@@ -375,12 +375,12 @@ function test_zipfian_mitigation_single_thread() {
 }
 
 function test_index_partition_single_thread() {
-  index_options=("btree" "art" "alex" "lipp" "dytis" "dili")
+  index_options=("alex" "lipp")
   concurrency_options=(1)
-  sampling_method_options=("uniform" "segmented")
-  bulkload_size_options=("100000000")
-  partition_method="range"
-  partition_num=16
+  sampling_method_options=("uniform" "segmented" "full")
+  bulkload_size_options=("0" "1000000" "2000000" "5000000" "10000000" "20000000" "50000000" "100000000" "200000000")
+  partition_method="model"
+  partition_num=1
   # Iterate over all combinations of parameters
   for index in "${index_options[@]}"; do
     for dataset in "${dataset_options[@]}"; do
@@ -388,6 +388,20 @@ function test_index_partition_single_thread() {
         for bulkload_size in "${bulkload_size_options[@]}"; do
           for insert_pattern in "${insert_pattern_options[@]}"; do
             for concurrency in "${concurrency_options[@]}"; do
+              if [ "$bulkload_size" = "200000000" ] && [ "$sampling_method" != "full" ]; then
+                # Skip bulkload size 200M with sampling method other than full
+                continue
+              fi
+              
+              if [ "$sampling_method" = "full" ] && { [ "$bulkload_size" != "200000000" ] || [ "$insert_pattern" != "sorted" ]; }; then
+                # Skip full sampling with bulkload sizes other than 200M and insert patterns must be sorted
+                continue
+              fi
+
+              if [ "$bulkload_size" = "0" ] && [ "$sampling_method" != "uniform" ]; then
+                # Skip bulkload size 0 with sampling_method_options other than uniform
+                continue
+              fi
               # Construct the base command
               cmd="python3 run.py --index=$index --dataset=$dataset --concurrency=$concurrency"
               

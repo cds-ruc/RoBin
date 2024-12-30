@@ -143,6 +143,8 @@ def main():
     partition_arg = ""
     if args.partition_method == "range":
         partition_arg = f" --partition_num={args.partition_num} --partition_method=range"
+    elif args.partition_method == "model":
+        partition_arg = f" --partition_num={args.partition_num} --partition_method=model"
     
     command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --sample_round={args.sampling_round} --thread_num={args.concurrency} {partition_arg} --index={args.index}"
     print(f"Running command: {command}")
