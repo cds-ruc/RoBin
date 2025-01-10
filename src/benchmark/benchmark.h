@@ -2626,6 +2626,7 @@ the same variable "table_size" when loading
     init_key_values = &preload_init_key_values[0];
     init_keys = preload_init_keys;
     init_table_ratio = reserve_init_table_ratio;
+    init_table_size = table_size * init_table_ratio;
     COUT_VAR(preload_init_keys.size());
     // reserve preload delete operations
     std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
