@@ -18,6 +18,9 @@
 #include <cassert>
 #include <cstddef>
 #include <fstream>
+#include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unordered_map>
 #include <vector>
 #include "tbb/parallel_sort.h"
@@ -81,6 +84,9 @@ public:
       // 均匀将数据分配到每个分区
       size_t start_idx = 0;
       for (size_t i = 0; i < partition_num_; i++) {
+        if (num == 0) {
+          break;
+        }
         if (i == partition_num_ - 1) {
           // all_keys to end
           index_[i]->bulk_load(key_value + start_idx, num - start_idx, param);
@@ -175,6 +181,7 @@ public:
   }
 
   void init(Param *param = nullptr) {
+    param_ = param;
     // call before bulk_load
     if (!use_model_) {
       assert(param->keys != nullptr);
@@ -198,11 +205,11 @@ public:
     } else {
       // TODO: load model file
       std::string model_file;
-      if (param->index_name == "alex") {
+      if (param->index_name == "alex" || param->index_name == "btree") {
         std::string model_file = "result/partition_model/" +
                                  param->dataset_name + "/" +
                                  std::to_string(10) + "/" + std::to_string(1) +
-                                 "/" + param->index_name + "_insert_root.log";
+                                 "/alex" + "_insert_root.log";
         std::cout << "model_file: " << model_file << endl;
         // read this file, such as
         // num_inserts,model_slope,model_intercept,num_slots
@@ -278,6 +285,10 @@ public:
         for (size_t i = 0; i < partition_num_; i++) {
           index_[i] = new LIPPInterface<KEY_TYPE, PAYLOAD_TYPE>;
         }
+      } else if (index_type_ == "btree") {
+        for (size_t i = 0; i < partition_num_; i++) {
+          index_[i] = new BTreeInterface<KEY_TYPE, PAYLOAD_TYPE>;
+        }
       } else {
         std::cout << "Could not find a matching index called " << index_type_
                   << ".\n";
@@ -293,6 +304,28 @@ public:
 
   long long memory_consumption() { return 0; }
 
+  ~partitionedIndexInterface() {
+    if (index_type_ == "alex") {
+      std::vector<size_t> alex_depth_dist;
+      for (size_t i = 0; i < partition_num_; i++) {
+        std::cout << "alex debug height " << i << std::endl;
+        auto alex_ptr =
+            dynamic_cast<alexInterface<KEY_TYPE, PAYLOAD_TYPE> *>(index_[i]);
+        auto d = alex_ptr->index.get_alex_depth();
+        alex_depth_dist.push_back(d);
+      }
+      std::ofstream out_depth_dist("partitioned_alex_depth_distribution.log");
+      if (!out_depth_dist.is_open()) {
+        std::cerr << "Failed to open file" << std::endl;
+        return;
+      }
+      for (size_t i = 0; i < alex_depth_dist.size(); i++) {
+        out_depth_dist << alex_depth_dist[i] << " ";
+      }
+      out_depth_dist.close();
+    }
+  }
+
 #ifdef PROFILING
   void print_stats(std::string s) {}
 #endif
@@ -305,4 +338,5 @@ private:
   std::string index_type_;
   double model_slope_ = 0.0;
   double model_intercept_ = 0.0;
+  Param *param_ = nullptr;
 };

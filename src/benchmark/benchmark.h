@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <jemalloc/jemalloc.h>
+#include <limits>
 #include <ostream>
 #include <random>
 #include <stdio.h>
@@ -552,7 +553,7 @@ public:
     init_keys.resize(init_table_size);
     // 从最左端开始，然后取init_table_size-1个key
     // 最后一个元素固定添加到init_keys里面
-    size_t start_pos = 0;
+    size_t start_pos = table_size-init_table_size;
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = start_pos; i < start_pos + init_table_size - 1; ++i) {
       init_keys[i - start_pos] = (keys[i]);
@@ -574,7 +575,8 @@ public:
     for (size_t i = init_table_size - 1; i < table_size - 1; ++i) {
       operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
     }
-
+    tbb::parallel_sort(operations.begin(), operations.end()); // sorted append
+    
     // step 3 backup_operations, backup_operations_num
     backup_operations_num = table_size;
     backup_operations.reserve(backup_operations_num);

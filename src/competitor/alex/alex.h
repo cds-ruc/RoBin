@@ -42,10 +42,11 @@ public:
     return ;
   }
 
-private:
+public:
   alex::Alex<KEY_TYPE, PAYLOAD_TYPE, alex::AlexCompare,
              std::allocator<std::pair<KEY_TYPE, PAYLOAD_TYPE>>, false>
       index;
+private:
   std::vector<long long> key_cmp_distribution;
   void print_key_cmp_distribution(std::string s) {
     std::ofstream out("alex_" + s + "_key_cmp_distribution.log");

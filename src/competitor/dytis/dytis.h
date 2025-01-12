@@ -2,6 +2,7 @@
 #include "./src/src/DyTIS.h"
 #include "./src/src/DyTIS_impl.h"
 #include <csignal>
+static size_t dytis_inserted = 0;
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 class dytisInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
@@ -68,7 +69,7 @@ bool dytisInterface<KEY_TYPE, PAYLOAD_TYPE>::put(KEY_TYPE key,
                                                  PAYLOAD_TYPE value,
                                                  Param *param) {
   index.Insert(key, value);
-  dytis_insert_succ++;
+  __sync_fetch_and_add(&dytis_insert_succ, 1);
   return true;
 }
 
