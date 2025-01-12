@@ -23,6 +23,7 @@ template <class KEY_TYPE, class PAYLOAD_TYPE>
 
 class diliInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
+  diliInterface() { std::signal(SIGTERM, handleSignal); }
   void init(Param *param = nullptr) {}
 
   void bulk_load(std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num,

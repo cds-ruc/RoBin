@@ -7,6 +7,7 @@ int counter = 0;
 template<class KEY_TYPE, class PAYLOAD_TYPE>
 class alexolInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
+    alexolInterface() { std::signal(SIGTERM, handleSignal); }
     void init(Param *param = nullptr) {}
 
     void bulk_load(std::pair <KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param = nullptr);
@@ -31,7 +32,7 @@ private:
 public:
   void static handleSignal(int signal) {
     if (signal == SIGTERM) {
-      printf("dytis timeout, dytis_insert_succ: %ld\n", alexolc_insert_succ);
+      printf("alexolc timeout, alexolc_insert_succ: %ld\n", alexolc_insert_succ);
       exit(1);
     }
   }
