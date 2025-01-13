@@ -17,13 +17,13 @@
 #include "./masstree/masstree.h"
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unordered_map>
 #include <vector>
-#include "tbb/parallel_sort.h"
 
 #define ROBIN_BOUND(a, x, b) ((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
 
@@ -35,6 +35,8 @@ public:
                size_t &partition_num) {
     if (partition_method == "range") {
       use_model_ = false;
+    } else if (partition_method == "naive") {
+      use_model_ = true;
     } else if (partition_method == "model") {
       // TODO: load model file
       // partition_model/dataset/test_suite/init_table_ratio
@@ -44,10 +46,12 @@ public:
                 << partition_method << ".\n";
       exit(0);
     }
+    partition_method_ = partition_method;
+    index_type_ = index_type;
     partition_num_ = partition_num;
     partition_key_ = new KEY_TYPE[partition_num - 1];
     index_ = new indexInterface<KEY_TYPE, PAYLOAD_TYPE> *[partition_num];
-    index_type_ = index_type;
+
     if (index_type == "alex") {
       for (size_t i = 0; i < partition_num; i++) {
         index_[i] = new alexInterface<KEY_TYPE, PAYLOAD_TYPE>;
@@ -184,127 +188,154 @@ public:
     param_ = param;
     // call before bulk_load
     if (!use_model_) {
-      assert(param->keys != nullptr);
-      KEY_TYPE *copied_keys = new KEY_TYPE[200000000];
+      if (partition_method_ == "range") {
+        // use full dataset range to partition
+        assert(param->keys != nullptr);
+        KEY_TYPE *copied_keys = new KEY_TYPE[200000000];
 #pragma omp parallel for
-      for (size_t i = 0; i < 200000000; i++) {
-        copied_keys[i] = ((KEY_TYPE *)param->keys)[i];
+        for (size_t i = 0; i < 200000000; i++) {
+          copied_keys[i] = ((KEY_TYPE *)param->keys)[i];
+        }
+        tbb::parallel_sort(copied_keys, copied_keys + 200000000);
+        int sub_index_size = 200000000 / partition_num_;
+        // cout<<"partition_key_: "<<endl;
+        for (size_t i = 0; i < partition_num_ - 1; i++) {
+          partition_key_[i] = copied_keys[(i + 1) * sub_index_size];
+          // cout<<partition_key_[i]<<", ";
+        }
+        // cout<<endl;
+        for (size_t i = 0; i < partition_num_; i++) {
+          index_[i]->init(param);
+        }
+        delete[] copied_keys;
       }
-      tbb::parallel_sort(copied_keys, copied_keys + 200000000);
-      int sub_index_size = 200000000 / partition_num_;
-      // cout<<"partition_key_: "<<endl;
-      for (size_t i = 0; i < partition_num_ - 1; i++) {
-        partition_key_[i] = copied_keys[(i + 1) * sub_index_size];
-        // cout<<partition_key_[i]<<", ";
-      }
-      // cout<<endl;
-      for (size_t i = 0; i < partition_num_; i++) {
-        index_[i]->init(param);
-      }
-      delete[] copied_keys;
     } else {
-      // TODO: load model file
-      std::string model_file;
-      if (param->index_name == "alex" || param->index_name == "btree") {
-        std::string model_file = "result/partition_model/" +
-                                 param->dataset_name + "/" +
-                                 std::to_string(10) + "/" + std::to_string(1) +
-                                 "/alex" + "_insert_root.log";
-        std::cout << "model_file: " << model_file << endl;
-        // read this file, such as
-        // num_inserts,model_slope,model_intercept,num_slots
-        // 0,1.60894e-13,-216370,16384
-        std::ifstream in(model_file);
-        if (!in.is_open()) {
-          std::cout << "Could not open model file " << model_file << ".\n";
-          exit(0);
+      if (partition_method_ == "naive") {
+        // use only dataset max and min to partition
+        assert(param->keys != nullptr);
+        KEY_TYPE *copied_keys = new KEY_TYPE[200000000];
+#pragma omp parallel for
+        for (size_t i = 0; i < 200000000; i++) {
+          copied_keys[i] = ((KEY_TYPE *)param->keys)[i];
         }
-        // skip the first line
-        std::string line;
-        std::getline(in, line);
-        // read the second line
-        std::getline(in, line);
-        std::stringstream ss(line);
-        // get the 2nd and 3rd value, , split by ','
-        std::string temp;
-        std::getline(ss, temp, ',');
-        std::getline(ss, temp, ',');
-        model_slope_ = std::stod(temp);
-        std::getline(ss, temp, ',');
-        model_intercept_ = std::stod(temp);
-        std::getline(ss, temp, ',');
-        partition_num_ = std::stoi(temp);
-        in.close();
-      } else if (param->index_name == "lipp") {
-        std::string model_file = "result/partition_model/" +
-                                 param->dataset_name + "/" +
-                                 std::to_string(22) + "/" + std::to_string(0) +
-                                 "/" + param->index_name + "_insert_root.log";
-        std::cout << "model_file: " << model_file << endl;
-        // read the same file, but the last line
-        std::ifstream in(model_file);
-        if (!in.is_open()) {
-          std::cout << "Could not open model file " << model_file << ".\n";
-          exit(0);
-        }
-        // read the read the last-1 line
-        // 读取倒数第二行
-        std::string line;
-        std::vector<std::string> lines;
-        while (std::getline(in, line)) {
-          lines.push_back(line);
-        }
-        if (lines.size() >= 1) {
-          line = lines[lines.size() - 1];
-        }
+        tbb::parallel_sort(copied_keys, copied_keys + 200000000);
+        int sub_index_size = 200000000 / partition_num_;
+        uint64_t min_key = copied_keys[0];
+        uint64_t max_key = copied_keys[200000000 - 1];
 
-        std::stringstream ss(line);
-        // get the 2nd and 3rd value, , split by ','
-        std::string temp;
-        std::getline(ss, temp, ',');
-        std::getline(ss, temp, ',');
-        model_slope_ = std::stod(temp);
-        std::getline(ss, temp, ',');
-        model_intercept_ = std::stod(temp);
-        std::getline(ss, temp, ',');
-        partition_num_ = std::stoi(temp);
-        in.close();
-      } else {
-        std::cout << "Could not find a matching index called "
-                  << param->index_name << ".\n";
-        exit(0);
-      }
-      delete[] partition_key_;
-      delete[] index_;
-      index_ = new indexInterface<KEY_TYPE, PAYLOAD_TYPE> *[partition_num_];
-      if (index_type_ == "alex") {
+        model_slope_ = (partition_num_ - 1) * 1.0 / (max_key - min_key);
+        model_intercept_ = 0 - model_slope_ * min_key;
         for (size_t i = 0; i < partition_num_; i++) {
-          index_[i] = new alexInterface<KEY_TYPE, PAYLOAD_TYPE>;
+          index_[i]->init(param);
         }
-      } else if (index_type_ == "lipp") {
+        delete[] copied_keys;
+      } else if (partition_method_ == "model") {
+        // use model to partition
+
+        // TODO: load model file
+        std::string model_file;
+        if (param->index_name == "alex" || param->index_name == "btree") {
+          std::string model_file =
+              "result/partition_model/" + param->dataset_name + "/" +
+              std::to_string(10) + "/" + std::to_string(1) + "/alex" +
+              "_insert_root.log";
+          std::cout << "model_file: " << model_file << endl;
+          // read this file, such as
+          // num_inserts,model_slope,model_intercept,num_slots
+          // 0,1.60894e-13,-216370,16384
+          std::ifstream in(model_file);
+          if (!in.is_open()) {
+            std::cout << "Could not open model file " << model_file << ".\n";
+            exit(0);
+          }
+          // skip the first line
+          std::string line;
+          std::getline(in, line);
+          // read the second line
+          std::getline(in, line);
+          std::stringstream ss(line);
+          // get the 2nd and 3rd value, , split by ','
+          std::string temp;
+          std::getline(ss, temp, ',');
+          std::getline(ss, temp, ',');
+          model_slope_ = std::stod(temp);
+          std::getline(ss, temp, ',');
+          model_intercept_ = std::stod(temp);
+          std::getline(ss, temp, ',');
+          partition_num_ = std::stoi(temp);
+          in.close();
+        } else if (param->index_name == "lipp") {
+          std::string model_file =
+              "result/partition_model/" + param->dataset_name + "/" +
+              std::to_string(22) + "/" + std::to_string(0) + "/" +
+              param->index_name + "_insert_root.log";
+          std::cout << "model_file: " << model_file << endl;
+          // read the same file, but the last line
+          std::ifstream in(model_file);
+          if (!in.is_open()) {
+            std::cout << "Could not open model file " << model_file << ".\n";
+            exit(0);
+          }
+          // read the read the last-1 line
+          // 读取倒数第二行
+          std::string line;
+          std::vector<std::string> lines;
+          while (std::getline(in, line)) {
+            lines.push_back(line);
+          }
+          if (lines.size() >= 1) {
+            line = lines[lines.size() - 1];
+          }
+
+          std::stringstream ss(line);
+          // get the 2nd and 3rd value, , split by ','
+          std::string temp;
+          std::getline(ss, temp, ',');
+          std::getline(ss, temp, ',');
+          model_slope_ = std::stod(temp);
+          std::getline(ss, temp, ',');
+          model_intercept_ = std::stod(temp);
+          std::getline(ss, temp, ',');
+          partition_num_ = std::stoi(temp);
+          in.close();
+        } else {
+          std::cout << "Could not find a matching index called "
+                    << param->index_name << ".\n";
+          exit(0);
+        }
+        delete[] partition_key_;
+        delete[] index_;
+        index_ = new indexInterface<KEY_TYPE, PAYLOAD_TYPE> *[partition_num_];
+        if (index_type_ == "alex") {
+          for (size_t i = 0; i < partition_num_; i++) {
+            index_[i] = new alexInterface<KEY_TYPE, PAYLOAD_TYPE>;
+          }
+        } else if (index_type_ == "lipp") {
+          for (size_t i = 0; i < partition_num_; i++) {
+            index_[i] = new LIPPInterface<KEY_TYPE, PAYLOAD_TYPE>;
+          }
+        } else if (index_type_ == "btree") {
+          for (size_t i = 0; i < partition_num_; i++) {
+            index_[i] = new BTreeInterface<KEY_TYPE, PAYLOAD_TYPE>;
+          }
+        } else {
+          std::cout << "Could not find a matching index called " << index_type_
+                    << ".\n";
+          exit(0);
+        }
         for (size_t i = 0; i < partition_num_; i++) {
-          index_[i] = new LIPPInterface<KEY_TYPE, PAYLOAD_TYPE>;
+          index_[i]->init(param);
         }
-      } else if (index_type_ == "btree") {
-        for (size_t i = 0; i < partition_num_; i++) {
-          index_[i] = new BTreeInterface<KEY_TYPE, PAYLOAD_TYPE>;
-        }
-      } else {
-        std::cout << "Could not find a matching index called " << index_type_
-                  << ".\n";
-        exit(0);
+        std::cout << "model_slope_: " << model_slope_
+                  << ", model_intercept_: " << model_intercept_ << endl;
       }
-      for (size_t i = 0; i < partition_num_; i++) {
-        index_[i]->init(param);
-      }
-      std::cout << "model_slope_: " << model_slope_
-                << ", model_intercept_: " << model_intercept_ << endl;
     }
   }
 
   long long memory_consumption() { return 0; }
 
   ~partitionedIndexInterface() {
+#ifdef PROFILING
     if (index_type_ == "alex") {
       std::vector<size_t> alex_depth_dist;
       for (size_t i = 0; i < partition_num_; i++) {
@@ -324,6 +355,7 @@ public:
       }
       out_depth_dist.close();
     }
+#endif
   }
 
 #ifdef PROFILING
@@ -336,6 +368,7 @@ private:
   KEY_TYPE *partition_key_;
   indexInterface<KEY_TYPE, PAYLOAD_TYPE> **index_;
   std::string index_type_;
+  std::string partition_method_;
   double model_slope_ = 0.0;
   double model_intercept_ = 0.0;
   Param *param_ = nullptr;

@@ -1,5 +1,6 @@
 from ast import parse
 import os
+import signal
 import sys
 import subprocess
 import argparse
@@ -43,7 +44,7 @@ def main():
     )
     parser.add_argument("--concurrency", required=True, default=1, help="concurrency")
     parser.add_argument("--partition_num", required=False, default=1, help="partition num")
-    parser.add_argument("--partition_method", required=False, default="", help="partition method",choices=["range", "model"])
+    parser.add_argument("--partition_method", required=False, default="", help="partition method",choices=["range", "model", "naive"])
     parser.add_argument(
         "--sampling_method",
         required=True,
@@ -146,6 +147,8 @@ def main():
         partition_arg = f" --partition_num={args.partition_num} --partition_method=range"
     elif args.partition_method == "model":
         partition_arg = f" --partition_num={args.partition_num} --partition_method=model"
+    elif args.partition_method == "naive":
+        partition_arg = f" --partition_num={args.partition_num} --partition_method=naive"
     
     command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --sample_round={args.sampling_round} --thread_num={args.concurrency} {partition_arg} --index={args.index} --preload_suite={args.preload_suite}"
     print(f"Running command: {command}")
@@ -156,7 +159,7 @@ def main():
             proc.terminate()
             print(f"Subprocess failed with error code {ret}. Failed command: {command}")
     except subprocess.TimeoutExpired:
-        proc.send_signal(15)
+        proc.send_signal(signal.SIGTERM)
         proc.terminate()  # 强制终止子进程
         print(f"Subprocess timeout, kill it. Failed command: {command}")
     except subprocess.CalledProcessError as e:

@@ -45,10 +45,9 @@ private:
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 void dytisInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param) {
-  dytis_insert_succ = 0;
   for (auto i = 0; i < num; i++) {
     index.Insert(key_value[i].first, key_value[i].second);
-    dytis_insert_succ++;
+    __sync_fetch_and_add(&dytis_insert_succ, 1);
   }
 }
 
