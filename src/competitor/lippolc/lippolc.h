@@ -21,6 +21,8 @@ public:
 
     long long memory_consumption() { return lipp.total_size(); }
 
+    void print_stats(std::string s) { return; }
+
 private:
     lippolc::LIPP<KEY_TYPE, PAYLOAD_TYPE> lipp;
 };
