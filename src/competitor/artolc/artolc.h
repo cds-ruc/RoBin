@@ -42,7 +42,7 @@ public:
         return resultCount;
     }
 
-    long long memory_consumption() { return 0; }
+    long long memory_consumption() { return idx->size(); }
 
     static void loadKey(TID tid, Key &key) {
         // Store the key of the tuple into the key vector
