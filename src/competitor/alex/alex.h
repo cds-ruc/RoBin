@@ -34,12 +34,13 @@ public:
       index.print_depth_stats(s);
       index.print_hist_model_stats(s);
       index.print_smo_stats(s);
+      index.print_smo_affected_items(s);
     }
     if (s == "read") {
       print_key_cmp_distribution(s);
       print_key_cmp_stats(s);
     }
-    return ;
+    return;
   }
 
 public:
