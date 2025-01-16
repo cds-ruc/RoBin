@@ -24,7 +24,7 @@ public:
                 Param *param = nullptr);
 
     long long memory_consumption() { return index.model_size() + index.data_size(); }
-
+    void print_stats(std::string s) { return; }
 private:
     alexol::Alex <KEY_TYPE, PAYLOAD_TYPE, alexol::AlexCompare, std::allocator<
             std::pair < KEY_TYPE, PAYLOAD_TYPE>>, false>

@@ -55,7 +55,7 @@ public:
   }
 
   long long memory_consumption() { return 0; }
-
+  void print_stats(std::string s) { return; }
 private:
   MapType *idx;
   struct alignas(CACHELINE_SIZE) threadinfo_align {

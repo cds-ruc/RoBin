@@ -30,7 +30,7 @@ public:
     std::tuple<long,double,long> depth(){
       return sali.depth();
     }
-
+    void print_stats(std::string s) { return; }
 private:
     sali::SALI<KEY_TYPE, PAYLOAD_TYPE> sali;
 };

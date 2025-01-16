@@ -22,7 +22,7 @@ public:
   }
 
   long long memory_consumption() { return idx.get_memory_usage(); }
-
+  void print_stats(std::string s) { return; }
 private:
   btreeolc::BTree<KEY_TYPE, PAYLOAD_TYPE> idx;
 };

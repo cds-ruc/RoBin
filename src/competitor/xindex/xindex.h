@@ -78,7 +78,7 @@ public:
     long long memory_consumption() {
         return 0;
     }
-
+    void print_stats(std::string s) { return; }
     ~xindexInterface() {
         delete this->index;
     }
