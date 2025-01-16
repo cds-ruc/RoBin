@@ -26,6 +26,7 @@ public:
   }
 
   void print_stats(std::string s) {
+#ifdef PROFILING
     if (s == "bulkload") {
       index.print_depth_stats(s);
       index.print_hist_model_stats(s);
@@ -40,6 +41,7 @@ public:
       print_key_cmp_distribution(s);
       print_key_cmp_stats(s);
     }
+#endif
     return;
   }
 
