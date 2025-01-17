@@ -62,6 +62,7 @@ template <typename KEY_TYPE, typename PAYLOAD_TYPE> class Benchmark {
   bool latency_sample = false;
   double latency_sample_ratio = 0.01;
   int error_bound;
+  bool out_of_bound_inject = false;
   std::string output_path;
   size_t random_seed;
   bool memory_record;
@@ -411,6 +412,9 @@ public:
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
     }
+    if (out_of_bound_inject) {
+      init_keys.push_back(std::numeric_limits<KEY_TYPE>::max());
+    }
     tbb::parallel_sort(init_keys.begin(), init_keys.end());
     init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
 #pragma omp parallel for num_threads(thread_num)
@@ -553,7 +557,7 @@ public:
     init_keys.resize(init_table_size);
     // 从最左端开始，然后取init_table_size-1个key
     // 最后一个元素固定添加到init_keys里面
-    size_t start_pos = table_size-init_table_size;
+    size_t start_pos = table_size - init_table_size;
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = start_pos; i < start_pos + init_table_size - 1; ++i) {
       init_keys[i - start_pos] = (keys[i]);
@@ -576,7 +580,7 @@ public:
       operations.push_back(std::pair<Operation, KEY_TYPE>(INSERT, keys[i]));
     }
     tbb::parallel_sort(operations.begin(), operations.end()); // sorted append
-    
+
     // step 3 backup_operations, backup_operations_num
     backup_operations_num = table_size;
     backup_operations.reserve(backup_operations_num);
@@ -1177,6 +1181,9 @@ public:
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
     }
+    if (out_of_bound_inject) {
+      init_keys.push_back(std::numeric_limits<KEY_TYPE>::max());
+    }
     tbb::parallel_sort(init_keys.begin(), init_keys.end());
     init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
 #pragma omp parallel for num_threads(thread_num)
@@ -1223,6 +1230,9 @@ public:
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
+    }
+    if (out_of_bound_inject) {
+      init_keys.push_back(std::numeric_limits<KEY_TYPE>::max());
     }
     tbb::parallel_sort(init_keys.begin(), init_keys.end());
     init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
@@ -1673,6 +1683,9 @@ public:
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
     }
+    if (out_of_bound_inject) {
+      init_keys.push_back(std::numeric_limits<KEY_TYPE>::max());
+    }
     tbb::parallel_sort(init_keys.begin(), init_keys.end());
     init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
 #pragma omp parallel for num_threads(thread_num)
@@ -1720,6 +1733,9 @@ public:
 #pragma omp parallel for num_threads(thread_num)
     for (size_t i = start_pos; i < start_pos + init_table_size; ++i) {
       init_keys[i - start_pos] = (keys[i]);
+    }
+    if (out_of_bound_inject) {
+      init_keys.push_back(std::numeric_limits<KEY_TYPE>::max());
     }
     tbb::parallel_sort(init_keys.begin(), init_keys.end());
     init_key_values = new std::pair<KEY_TYPE, PAYLOAD_TYPE>[init_keys.size()];
@@ -2299,7 +2315,8 @@ the same variable "table_size" when loading
         merge_init_key_values.push_back(bulkload_init_key_values[i]);
       }
     }
-    tbb::parallel_sort(merge_init_key_values.begin(), merge_init_key_values.end());
+    tbb::parallel_sort(merge_init_key_values.begin(),
+                       merge_init_key_values.end());
     // recover init key values
     init_key_values = &merge_init_key_values[0];
     init_keys = merge_init_keys;
@@ -2396,7 +2413,7 @@ the same variable "table_size" when loading
     tbb::parallel_sort(remaining_keys.begin(), remaining_keys.end());
     // generate preload init key values
     std::vector<KEY_TYPE> preload_init_keys;
-    preload_init_keys.resize(init_table_size);  // 1:1 preload as bulkload
+    preload_init_keys.resize(init_table_size); // 1:1 preload as bulkload
     size_t gap_size = remaining_keys.size() / init_table_size;
     COUT_VAR(gap_size);
     for (size_t i = 0; i < init_table_size; ++i) {
@@ -2406,8 +2423,10 @@ the same variable "table_size" when loading
     // merge preload and bulkload init keys
     std::vector<KEY_TYPE> merge_init_keys;
     std::vector<std::pair<KEY_TYPE, PAYLOAD_TYPE>> merge_init_key_values;
-    merge_init_keys.reserve(preload_init_keys.size() + bulkload_init_keys.size());
-    merge_init_key_values.resize(preload_init_keys.size() + bulkload_init_keys.size());
+    merge_init_keys.reserve(preload_init_keys.size() +
+                            bulkload_init_keys.size());
+    merge_init_key_values.resize(preload_init_keys.size() +
+                                 bulkload_init_keys.size());
     for (size_t i = 0; i < preload_init_keys.size(); ++i) {
       merge_init_keys.push_back(preload_init_keys[i]);
     }
@@ -2427,11 +2446,12 @@ the same variable "table_size" when loading
     // reserve preload delete operations
     std::vector<std::pair<Operation, KEY_TYPE>> preload_delete_operations;
     for (size_t i = 0; i < preload_init_keys.size(); ++i) {
-      preload_delete_operations.push_back(std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
+      preload_delete_operations.push_back(
+          std::pair<Operation, KEY_TYPE>(DELETE, preload_init_keys[i]));
     }
     size_t preload_delete_operations_num = preload_delete_operations.size();
     COUT_VAR(preload_delete_operations_num);
-    
+
     /// run
     ///
     for (auto s : all_index_type) {
@@ -2529,7 +2549,8 @@ the same variable "table_size" when loading
         merge_init_key_values.push_back(bulkload_init_key_values[i]);
       }
     }
-    tbb::parallel_sort(merge_init_key_values.begin(), merge_init_key_values.end());
+    tbb::parallel_sort(merge_init_key_values.begin(),
+                       merge_init_key_values.end());
     // recover init key values
     init_key_values = &merge_init_key_values[0];
     init_keys = merge_init_keys;
@@ -2600,8 +2621,10 @@ the same variable "table_size" when loading
     }
   }
 
-  void run_preload_custom_suite_osm() { // use osm to preload (only need to run test_suite case 21 and 22)
-                                        // e.g. osm bulk + covid insert 200M + osm delete + covid search 200M
+  void run_preload_custom_suite_osm() { // use osm to preload (only need to run
+                                        // test_suite case 21 and 22) e.g. osm
+                                        // bulk + covid insert 200M + osm delete
+                                        // + covid search 200M
     assert(preload_suite == 200);
 
     /// generate preload keys and operations
@@ -2891,9 +2914,10 @@ the same variable "table_size" when loading
     COUT_VAR(init_keys.size());
   }
 
-  void
-  generate_preload_dataset_case100() { // use sampled remain (i.e. insert) dataset to preload
-    init_table_size = init_table_ratio * table_size; // the same proportion as bulkload size
+  void generate_preload_dataset_case100() { // use sampled remain (i.e. insert)
+                                            // dataset to preload
+    init_table_size =
+        init_table_ratio * table_size; // the same proportion as bulkload size
     init_keys.resize(init_table_size);
     size_t gap_size = (preload_keys[table_size - 1] - preload_keys[0]) /
                       (init_table_size - 1);
@@ -3137,6 +3161,7 @@ public:
     sample_distribution =
         get_with_default(flags, "sample_distribution", "uniform");
     latency_sample = get_boolean_flag(flags, "latency_sample");
+    out_of_bound_inject = get_boolean_flag(flags, "out_of_bound_inject");
     latency_sample_ratio =
         stod(get_with_default(flags, "latency_sample_ratio", "0.01"));
     error_bound = stoi(get_with_default(flags, "error_bound", "64"));
