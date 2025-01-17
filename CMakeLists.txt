@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
-project(GRE_PRO)
 
 # 设置编译器
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+
+project(RoBin)
 
 # 确保GCC版本不低于11.4.0
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

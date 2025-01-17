@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 numanode=0
 epoch_limit=1
 
@@ -406,8 +407,8 @@ function test_ro_thp_single_thread_extended_oob() {
   rm run.log
 }
 
-# Build the RoBin project
-./build.sh release
+# Set the number of NUMA nodes
+export numanode=$numanode
 
 # Run the tests
 test_ro_thp_single_thread
