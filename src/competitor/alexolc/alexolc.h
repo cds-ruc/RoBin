@@ -23,6 +23,15 @@ public:
 
     long long memory_consumption() { return index.model_size() + index.data_size(); }
 
+    void print_stats(std::string s) { 
+        if (s == "bulkload") {
+            index.print_size_stats(s);
+        }
+        if (s == "insert") {
+            index.print_size_stats(s);
+        }
+    }
+
 private:
     alexol::Alex <KEY_TYPE, PAYLOAD_TYPE, alexol::AlexCompare, std::allocator<
             std::pair < KEY_TYPE, PAYLOAD_TYPE>>, false>

@@ -21,6 +21,15 @@ public:
 
     long long memory_consumption() { return sali.total_size(); }
 
+    void print_stats(std::string s) { 
+        if (s == "bulkload") {
+            sali.print_size_stats(s);
+        }
+        if (s == "insert") {
+            sali.print_size_stats(s);
+        }
+    }
+
     void print(Param *param = nullptr){ sali.print_depth();}
 
     long adjust_num(){

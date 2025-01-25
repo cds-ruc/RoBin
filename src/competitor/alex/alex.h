@@ -29,11 +29,18 @@ public:
     if (s == "bulkload") {
       index.print_depth_stats(s);
       index.print_hist_model_stats(s);
+      // index.print_information_gain(s);
+      index.print_node_size(s);
+      index.print_size_stats(s);
     }
     if (s == "insert") {
       index.print_depth_stats(s);
       index.print_hist_model_stats(s);
+      // index.print_information_gain(s);
+      index.print_node_size(s);
       index.print_smo_stats(s);
+      index.print_size_stats(s);
+      index.print_memory_exception(s);
     }
     if (s == "read") {
       print_key_cmp_distribution(s);
