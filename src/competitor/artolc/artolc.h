@@ -56,7 +56,7 @@ public:
         // key.setKeyLen(sizeof(valPtr->first));
         // reinterpret_cast<KEY_TYPE *>(&key[0])[0] = swap_endian(valPtr->first);
     }
-    void print_stats(std::string s) { return; }
+    
     ~ARTOLCInterface() {
         delete idx;
     }
