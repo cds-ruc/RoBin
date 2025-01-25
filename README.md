@@ -76,7 +76,7 @@ cd results
 # such as single_thread.ipynb and etc.
 ```
 
-### Profiling (tyh TODO)
+### Profiling
 
 Build with the flag "PROFILING":
 ```shell
@@ -86,21 +86,29 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILING=ON
 make -j
 ```
+or just run the following script:
+```shell
+bash build.sh profiling
+```
 
 **Note that our code modifications for profiling have no impact on index performance when building without this flag for benchmark test.**
 
 Run profiling script:
 ```shell
-bash run_profiling.sh
+bash run_case_profiling.sh  # (recommended) minimal case study to reproduce the figures in our paper
+# bash run_all_profiling.sh   # all case profiling which may take large amount of running time and disk space
 ```
+
+
 
 Using the jupyter notebook to plot the profiling results:
 ```shell
-cd script
-## open and run the following jupyter notebooks to reproduce the figure in our paper
-## analysis_cmp.ipynb
+cd profiling_result
+## open and run the following jupyter notebooks to reproduce the figures in our paper
 ## analysis_depth.ipynb
+## analysis_memory.ipynb
 ## analysis_overfit.ipynb
+## analysis_smo.ipynb
 ```
 
 
