@@ -17,6 +17,13 @@ Robin is a **Ro**bustness **B**enchmark for range **in**dexes (especially for up
 6. We add profiling stats for art, btree, alex and lipp about the distribution of depth, comparison count of leaf node search, the model of root node and so on, with minor invasion.
 
 ## Reproduce Step
+
+If you want to go faster, you can just run the following script to install the dependencies download the dataset and build the project:
+
+```shell
+bash prepare.sh
+```
+
 ### Prepare
 RoBin depends on the tbb, jemalloc and boost library. You can install them by the following command:
 
@@ -46,6 +53,10 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 make -j
 ```
+or just run the following script:
+```shell
+bash build.sh
+```
 
 ### Reproduce
 
@@ -53,18 +64,19 @@ Benchmark all the competitors via RoBin with the following command:
 
 **It may cost some time to finish.**
 ```shell
-export numanode=xxx # if you have multiple numa nodes, you must specify the numa node in case of the memory allocation from different numa nodes
 bash reproduce.sh
 ```
 
-Using the jupyter notebook to plot the performance results:
+The results will be stored in the `results` directory.
+
+Using the jupyter notebook to plot the results:
 ```shell
-cd script
-## open and run the following jupyter notebook to reproduce the figure in our paper
-## result_plotter.ipynb
+cd results
+# open and run the following jupyter notebook to reproduce the figure in our paper
+# such as single_thread.ipynb and etc.
 ```
 
-### Profiling
+### Profiling (tyh TODO)
 
 Build with the flag "PROFILING":
 ```shell

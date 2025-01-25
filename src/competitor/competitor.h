@@ -1,13 +1,16 @@
 #include "partition_interface.h"
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
-indexInterface<KEY_TYPE, PAYLOAD_TYPE> *get_index(std::string index_type,std::string partition_method,size_t& partition_num) {
+indexInterface<KEY_TYPE, PAYLOAD_TYPE> *get_index(std::string index_type,
+                                                  std::string partition_method,
+                                                  size_t &partition_num) {
   indexInterface<KEY_TYPE, PAYLOAD_TYPE> *index;
-  if (partition_method == "range" || partition_method == "model") {
-    std::cout<<"using partition_method: "<<partition_method<<std::endl;
+  if (partition_method == "range" || partition_method == "model" ||
+      partition_method == "naive") {
+    std::cout << "using partition_method: " << partition_method << std::endl;
     auto idx = new partitionedIndexInterface<KEY_TYPE, PAYLOAD_TYPE>;
     idx->prepare(index_type, partition_method, partition_num);
-    index=idx;
+    index = idx;
   } else {
     if (index_type == "alex") {
       index = new alexInterface<KEY_TYPE, PAYLOAD_TYPE>;

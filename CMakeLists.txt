@@ -1,9 +1,17 @@
 cmake_minimum_required(VERSION 3.14)
-project(GRE_PRO)
 
 # 设置编译器
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+
+project(RoBin)
+
+# 确保GCC版本不低于11.4.0
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.4.0)
+        message(FATAL_ERROR "GCC version must be at least 11.4.0")
+    endif()
+endif()
 
 # 添加自定义模块路径
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})

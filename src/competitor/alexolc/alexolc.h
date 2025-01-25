@@ -1,11 +1,13 @@
 #include"./src/src/alex.h"
 #include"../indexInterface.h"
-
+#include <csignal>
+static size_t alexolc_inserted = 0;
 int counter = 0;
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
 class alexolInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
+    alexolInterface() { std::signal(SIGTERM, handleSignal); }
     void init(Param *param = nullptr) {}
 
     void bulk_load(std::pair <KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param = nullptr);
@@ -36,6 +38,14 @@ private:
     alexol::Alex <KEY_TYPE, PAYLOAD_TYPE, alexol::AlexCompare, std::allocator<
             std::pair < KEY_TYPE, PAYLOAD_TYPE>>, false>
     index;
+public:
+  void static handleSignal(int signal) {
+    if (signal == SIGTERM) {
+      printf("alexolc timeout, alexolc_insert_succ: %ld\n", alexolc_insert_succ);
+      exit(1);
+    }
+  }
+  inline static uint64_t alexolc_insert_succ = 0;
 
 };
 
@@ -58,6 +68,7 @@ bool alexolInterface<KEY_TYPE, PAYLOAD_TYPE>::get(KEY_TYPE key, PAYLOAD_TYPE &va
 
 template<class KEY_TYPE, class PAYLOAD_TYPE>
 bool alexolInterface<KEY_TYPE, PAYLOAD_TYPE>::put(KEY_TYPE key, PAYLOAD_TYPE value, Param *param) {
+    __sync_fetch_and_add(&alexolc_insert_succ, 1);
     return index.insert(key, value);
 }
 

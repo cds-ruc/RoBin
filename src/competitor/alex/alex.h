@@ -26,6 +26,7 @@ public:
   }
 
   void print_stats(std::string s) {
+#ifdef PROFILING
     if (s == "bulkload") {
       index.print_depth_stats(s);
       index.print_hist_model_stats(s);
@@ -41,18 +42,21 @@ public:
       index.print_smo_stats(s);
       index.print_size_stats(s);
       index.print_memory_exception(s);
+      // index.print_smo_affected_items(s);
     }
     if (s == "read") {
       print_key_cmp_distribution(s);
       print_key_cmp_stats(s);
     }
-    return ;
+#endif
+    return;
   }
 
-private:
+public:
   alex::Alex<KEY_TYPE, PAYLOAD_TYPE, alex::AlexCompare,
              std::allocator<std::pair<KEY_TYPE, PAYLOAD_TYPE>>, false>
       index;
+private:
   std::vector<long long> key_cmp_distribution;
   void print_key_cmp_distribution(std::string s) {
     std::ofstream out("alex_" + s + "_key_cmp_distribution.log");

@@ -35,6 +35,7 @@ struct BaseCompare {
 template <class KEY_TYPE, class PAYLOAD_TYPE, class KeyComparator = BaseCompare>
 class indexInterface {
 public:
+  virtual ~indexInterface() = default;
   virtual void bulk_load(std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value,
                          size_t num, Param *param = nullptr) = 0;
 

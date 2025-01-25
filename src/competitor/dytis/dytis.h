@@ -2,6 +2,7 @@
 #include "./src/src/DyTIS.h"
 #include "./src/src/DyTIS_impl.h"
 #include <csignal>
+static size_t dytis_inserted = 0;
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 class dytisInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
@@ -44,10 +45,9 @@ private:
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 void dytisInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
     std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num, Param *param) {
-  dytis_insert_succ = 0;
   for (auto i = 0; i < num; i++) {
     index.Insert(key_value[i].first, key_value[i].second);
-    dytis_insert_succ++;
+    __sync_fetch_and_add(&dytis_insert_succ, 1);
   }
 }
 
@@ -68,7 +68,7 @@ bool dytisInterface<KEY_TYPE, PAYLOAD_TYPE>::put(KEY_TYPE key,
                                                  PAYLOAD_TYPE value,
                                                  Param *param) {
   index.Insert(key, value);
-  dytis_insert_succ++;
+  __sync_fetch_and_add(&dytis_insert_succ, 1);
   return true;
 }
 

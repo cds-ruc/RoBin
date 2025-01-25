@@ -21,10 +21,9 @@ public:
     return idx.scan(key_low_bound, key_num, result);
   }
 
-  long long memory_consumption() { return 0; }
-
+  long long memory_consumption() { return idx.get_memory_usage(); }
+  
   void print_stats(std::string s) { return; }
-
 private:
   btreeolc::BTree<KEY_TYPE, PAYLOAD_TYPE> idx;
 };

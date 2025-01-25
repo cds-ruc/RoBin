@@ -14,14 +14,16 @@
 #include "./src/src/utils/file_utils.h"
 #include "./src/src/utils/linux_sys_utils.cpp"
 
+#include <csignal>
 #include <filesystem>
 #include <utility>
 #include <vector>
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
 
-class diliInterface final: public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
+class diliInterface final : public indexInterface<KEY_TYPE, PAYLOAD_TYPE> {
 public:
+  diliInterface() { std::signal(SIGTERM, handleSignal); }
   void init(Param *param = nullptr) {}
 
   void bulk_load(std::pair<KEY_TYPE, PAYLOAD_TYPE> *key_value, size_t num,
@@ -41,9 +43,19 @@ public:
 
   long long memory_consumption() { return 0; }
 
-  void print_stats(std::string s) { return ; }
+  void print_stats(std::string s) { return; }
+
 private:
   DILI dili;
+
+public:
+  void static handleSignal(int signal) {
+    if (signal == SIGTERM) {
+      printf("dili timeout, dili_insert_succ: %ld\n", dili_insert_succ);
+      exit(1);
+    }
+  }
+  inline static uint64_t dili_insert_succ = 0;
 };
 
 template <class KEY_TYPE, class PAYLOAD_TYPE>
@@ -66,9 +78,11 @@ void diliInterface<KEY_TYPE, PAYLOAD_TYPE>::bulk_load(
   for (long i = 0; i < num; i++) {
     bulk_data.push_back(
         make_pair((long)(key_value[i].first), (long)(key_value[i].second)));
-    if(check_reinterpret && (long)(key_value[i].first)!=key_value[i].first){
-      std::cout<<"Warning: key type is not long, reinterpret it as long"<<std::endl;
-      std::cout<<key_value[i].first<<" -> "<<(long)(key_value[i].first)<<std::endl;
+    if (check_reinterpret && (long)(key_value[i].first) != key_value[i].first) {
+      std::cout << "Warning: key type is not long, reinterpret it as long"
+                << std::endl;
+      std::cout << key_value[i].first << " -> " << (long)(key_value[i].first)
+                << std::endl;
       // check_reinterpret = false;
     }
   }
@@ -90,6 +104,7 @@ template <class KEY_TYPE, class PAYLOAD_TYPE>
 bool diliInterface<KEY_TYPE, PAYLOAD_TYPE>::put(KEY_TYPE key,
                                                 PAYLOAD_TYPE value,
                                                 Param *param) {
+  __sync_fetch_and_add(&dili_insert_succ, 1);
   return dili.insert((long)(key), (long)(value));
 }
 
