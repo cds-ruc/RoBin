@@ -46,7 +46,7 @@ public:
     }
     if (s == "read") {
       print_key_cmp_distribution(s);
-      print_key_cmp_stats(s);
+      // print_key_cmp_stats(s);
     }
 #endif
     return;
