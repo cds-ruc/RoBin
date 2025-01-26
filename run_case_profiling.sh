@@ -22,6 +22,7 @@ function AlexCaseTest {
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
                     --thread_num=1 \
+                    --memory=true \
                     --index=alex
                 done
                 TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -53,6 +54,7 @@ function AlexCaseTest {
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
                     --thread_num=1 \
+                    --memory=true \
                     --index=alex
                 done
                 TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -79,6 +81,7 @@ function AlexCaseTest {
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
                     --thread_num=1 \
+                    --memory=true \
                     --index=alex
                 done
                 TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -109,6 +112,7 @@ function AlexCaseTest {
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
                     --thread_num=1 \
+                    --memory=true \
                     --index=alex
                 done
                 TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -142,6 +146,7 @@ function LippCaseTest {
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
                     --thread_num=1 \
+                    --memory=true \
                     --index=lipp
                 done
                 TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -172,6 +177,7 @@ function LippCaseTest {
                 --table_size=-1 \
                 --init_table_ratio=$init_table_ratio \
                 --thread_num=1 \
+                --memory=true \
                 --index=lipp
             done
             TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -197,6 +203,7 @@ function LippCaseTest {
                     --table_size=-1 \
                     --init_table_ratio=$init_table_ratio \
                     --thread_num=1 \
+                    --memory=true \
                     --index=lipp
                 done
                 TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
@@ -268,6 +275,6 @@ function MemoryBreakdown {
     done
 }
 
-AlexCaseTest
+# AlexCaseTest
 LippCaseTest
 MemoryBreakdown

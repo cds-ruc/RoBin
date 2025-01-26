@@ -95,15 +95,14 @@ bash build.sh profiling
 
 Run profiling script:
 ```shell
-bash run_case_profiling.sh  # (recommended) minimal case study to reproduce the figures in our paper
+bash run_case_profiling.sh  # (recommended) minimal case study to reproduce the figures in our paper [2~3 hours]
 # bash run_all_profiling.sh   # all case profiling which may take large amount of running time and disk space
 ```
-
-
 
 Using the jupyter notebook to plot the profiling results:
 ```shell
 cd profiling_result
+mkdir -p fig
 ## open and run the following jupyter notebooks to reproduce the figures in our paper
 ## analysis_depth.ipynb
 ## analysis_memory.ipynb
