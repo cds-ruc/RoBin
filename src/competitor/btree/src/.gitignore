@@ -1,0 +1,14 @@
+# ignore automake files
+/Makefile
+/autom4te.cache
+/config.log
+/config.status
+*/Makefile
+*/.deps
+*.o
+
+# ignore binaries
+/testsuite/testsuite
+/wxbtreedemo/wxBTreeDemo
+/speedtest/speedtest
+/speedtest/speedtest-tune
