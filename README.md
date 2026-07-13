@@ -3,6 +3,8 @@
 
 Robin is a **Ro**bustness **B**enchmark for range **in**dexes (especially for updatable learned indexes).
 
+See our SIGMOD 2026 paper: [Understanding Robustness Issues of Updatable Learned Indexes: \[Experiments & Analysis\]](https://dl.acm.org/doi/abs/10.1145/3749188)
+
 > [Robin](https://en.wikipedia.org/wiki/European_robin) is also an insect-eating bird that offers great benefits to agriculture.
 
 [![RoBin Build](https://github.com/cds-ruc/RoBin/actions/workflows/cmake-build.yml/badge.svg)](https://github.com/cds-ruc/RoBin/actions/workflows/cmake-build.yml)
