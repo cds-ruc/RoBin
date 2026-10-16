@@ -1,4 +1,6 @@
 #!/bin/bash
+DATASET_DIR="${DATASET_DIR:-./datasets}"
+LOG_DIR="${LOG_DIR:-./log}"
 batch=1
 
 function AlexCaseTest {
@@ -13,7 +15,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -25,7 +27,7 @@ function AlexCaseTest {
                     --memory=true \
                     --index=alex
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -45,7 +47,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -57,7 +59,7 @@ function AlexCaseTest {
                     --memory=true \
                     --index=alex
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -72,7 +74,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -84,7 +86,7 @@ function AlexCaseTest {
                     --memory=true \
                     --index=alex
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -103,7 +105,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -115,7 +117,7 @@ function AlexCaseTest {
                     --memory=true \
                     --index=alex
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -137,7 +139,7 @@ function LippCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -149,7 +151,7 @@ function LippCaseTest {
                     --memory=true \
                     --index=lipp
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -168,7 +170,7 @@ function LippCaseTest {
             for ((i=1; i<=batch; i++))
             do
                 ./build/microbench \
-                --keys_file=/home/dataset/gre_dataset/$dataset \
+                --keys_file=$DATASET_DIR/$dataset \
                 --keys_file_type=binary \
                 --read=0.0 --insert=0.0 \
                 --update=0.0 --scan=0.0  --delete=0.0 \
@@ -180,7 +182,7 @@ function LippCaseTest {
                 --memory=true \
                 --index=lipp
             done
-            TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+            TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
             if [ ! -d "$TARGET_DIR" ]; then
             mkdir -p "$TARGET_DIR"
             fi
@@ -194,7 +196,7 @@ function LippCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -206,7 +208,7 @@ function LippCaseTest {
                     --memory=true \
                     --index=lipp
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -227,7 +229,7 @@ function MemoryBreakdown {
             for ((i=1; i<=batch; i++))
             do
                 ./build/microbench \
-                --keys_file=/home/dataset/gre_dataset/$dataset \
+                --keys_file=$DATASET_DIR/$dataset \
                 --keys_file_type=binary \
                 --read=0.0 --insert=0.0 \
                 --update=0.0 --scan=0.0  --delete=0.0 \
@@ -239,7 +241,7 @@ function MemoryBreakdown {
                 --memory=true \
                 --index=alex,lipp,alexolc,sali
             done
-            TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+            TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
             if [ ! -d "$TARGET_DIR" ]; then
             mkdir -p "$TARGET_DIR"
             fi
@@ -253,7 +255,7 @@ function MemoryBreakdown {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=/home/dataset/gre_dataset/$dataset \
+                    --keys_file=$DATASET_DIR/$dataset \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -265,7 +267,7 @@ function MemoryBreakdown {
                     --memory=true \
                     --index=alex
                 done
-                TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+                TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
                 if [ ! -d "$TARGET_DIR" ]; then
                 mkdir -p "$TARGET_DIR"
                 fi
@@ -275,6 +277,6 @@ function MemoryBreakdown {
     done
 }
 
-# AlexCaseTest
+AlexCaseTest
 LippCaseTest
 MemoryBreakdown

@@ -1,0 +1,320 @@
+# RoBin Artifact Evaluation
+
+Reviewer guide for *Understanding Robustness Issues of Updatable Learned Indexes*,
+following the [SIGMOD ARI guidelines](https://reproducibility.sigmod.org/#Guidelines).
+
+The repository ships the benchmark, the scripts and the paper's plotting
+notebooks, and no measurements of ours. Your runs fill `artifact/results/`.
+The paper's own measurements are on the `conf_rel` branch; the scripts use
+them to redraw the paper's figures and as the comparison point for your runs.
+
+## At a glance
+
+**Key results.** Figures 3-17 and Tables 1-2 (Findings 1-12, Sections 5 and
+6). Figures 1 (design diagram) and 2 (dataset CDFs) are descriptive and back
+no claim. §1 maps every key result to its experiment directory.
+
+**Setup** (once, from the repository root):
+
+```bash
+git fetch origin conf_rel                 # the paper's released measurements (a plain clone has it)
+pip install -r artifact/requirements.txt  # Python 3.11: pandas, numpy, matplotlib, seaborn, pinned
+# everything below the first entry point also needs:
+bash build.sh release                     # ./build/microbench; installs libtbb, libmkl, libjemalloc,
+                                          # libboost with apt, so run it as root or preinstall them
+bash artifact/data/fetch.sh               # the four datasets, 8.0 GB, checksums verified
+export numanode=0                         # NUMA node to bind to
+```
+
+**Entry points.** Every case loads all 200M keys, so the paper's full grid is
+~150 h of single-core work. Pick one:
+
+| command | what it reproduces | time | needs |
+| --- | --- | --- | --- |
+| `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and every number the text quotes, recomputed from the released measurements | ~1 min | first two setup lines |
+| `bash artifact/run_small.sh` | subset: the key cases of every claim except Fig. 17 (which needs the full grid), at full scale, on your machine | ~3 h | full setup and hardware |
+| `bash artifact/run_small.sh --tier figures` | after the default subset: the cases Fig. 5, 6 and 8 need to be redrawn completely from your runs | ~6 h | full setup and hardware |
+| `bash artifact/run_all.sh` | full set: every grid of the paper and the Section 5 profiling | ~1 week | full setup and hardware |
+| `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | full setup and hardware |
+
+**Hardware.**
+* Minimum: Linux x86-64, ≥ 17 logical CPUs (16-thread cases run on CPUs
+  1-16), ≥ 48 GB RAM (the largest subset case is ALEX at ~37 GB), ~9 GB disk.
+* Recommended: ≥ 64 GB RAM (the full set includes SALI at ~55 GB), 2 NUMA
+  nodes with `numactl`.
+
+**What success looks like.**
+* `run_small.sh --plots-only` prints
+  `reference claims: 31/31 within tolerance (2 informational), 0 mismatch`
+  and ends with `=== produced ===`.
+* Each case prints `[n/N] <case> (~eta, ~eta left)`, then
+  `ok -> <result file> (+k records)`.
+* `artifact/results/status.json` marks each case `ok`, apart from the
+  crashes and timeouts listed below.
+
+**Benign messages.**
+* `binding with numa node: 0`, and compiler warnings from the index
+  submodules during `build.sh`.
+* `cell N: failed-case table skipped, *_fail_case.log not released` in
+  `artifact/figures/paper/MANIFEST.md`: the paper's failed-case logs were not
+  released, so those two notebook cells are skipped. The figures are
+  unaffected, and your runs write the logs into `artifact/results/`.
+* `cell N: not drawn yet, its cases are not in artifact/results` in
+  `artifact/figures/results/MANIFEST.md`, for figures whose cases you have
+  not run yet.
+* In `--tier extended`, DyTIS, DILI and FINEdex cases recorded as `failed` or
+  `timeout`. These crashes and timeouts are the paper's own result (Fig. 3/4
+  captions, Table 1, Finding 6), not an artifact problem.
+* Covid/LIPP `<segmented, 2M, sorted>`, the slowest subset case, can reach
+  run.py's 30-minute per-case limit on a slow machine. It is then recorded as
+  `timeout`, with its finished phases kept.
+
+**Disk.** The datasets are raw uint64 binaries, 1,600,000,008 bytes each, with
+no decompression step: `covid`, `osm` and `fb` are downloaded, `linear` and
+`fb-1` are generated. 8.0 GB in total, plus 45 MB for the build.
+
+**Resuming.** Every step can be rerun:
+* `artifact/data/fetch.sh` keeps existing dataset files.
+* The subset runner skips every case recorded in
+  `artifact/results/status.json`.
+* `run_all.sh` marks each finished grid in `artifact/results/.full/`.
+
+An interrupted run continues where it stopped; `--force` runs again.
+
+**What depends on the hardware.** Absolute throughput and latency depend on
+the hardware. Relative statements must hold on any machine, and those are
+what the claims are:
+- which index is faster;
+- how far a worst case falls below its baseline;
+- whether a parameter helps or hurts.
+
+Space does not depend on the CPU. Suspect a real problem if:
+- an ordering flips (e.g. LIPP's worst insert above B+tree's);
+- a lookup with an outlier is not below the same lookup without it;
+- a space value differs from the case's `reference` in `artifact/cases.json`
+  by more than ~10%.
+
+**Contact.**
+* Yuanhui Luo (losk@ruc.edu.cn).
+* Corresponding authors: Minhui Xie (xieminhui@ruc.edu.cn) and Yunpeng Chai
+  (ypchai@ruc.edu.cn).
+* Or open an issue at https://github.com/cds-ruc/RoBin.
+
+## 1. Claims map
+
+Throughput, latency and space change from machine to machine and from run to
+run, so a reproduction is judged on the **trend** each figure shows, not on
+its numbers: which index is above which, which configuration falls below its
+baseline, which way a parameter moves the result. Each experiment directory's
+`README.md` states the claim, what to look at in the figure and how to check
+your runs.
+
+| paper | experiment | trend the paper claims |
+| --- | --- | --- |
+| Fig. 3, Table 1 | [`fig03_tab1_single_thread`](experiments/fig03_tab1_single_thread/) | learned indexes fluctuate far more than B+tree and ART and are often slower than ART; except ALEX, their worst-case insert falls far below B+tree's |
+| Fig. 4, Table 2 | [`fig04_tab2_multi_thread`](experiments/fig04_tab2_multi_thread/) | the same picture with 16 threads, larger gaps; ALEX-OLC and SALI do not scale in their worst insert case, B+tree-OLC and ART-OLC do |
+| Fig. 5, 6 | [`fig05_06_tail_latency`](experiments/fig05_06_tail_latency/) | the worst insert tail latency of learned indexes is far above the traditional indexes', more so with 16 threads |
+| Fig. 7 | [`fig07_space`](experiments/fig07_space/) | learned-index space varies widely; LIPP uses many times the data size; ALEX has an abnormal case on Face; SALI needs about twice LIPP's space |
+| Fig. 8a-c | [`fig08_sensitivity`](experiments/fig08_sensitivity/) | one changed variable moves learned indexes a lot: ALEX reacts to the insert pattern, LIPP to bulkload size and sampling |
+| Fig. 9 | [`fig09_out_of_bound`](experiments/fig09_out_of_bound/) | one outlier in the bulkload lowers ALEX's lookup in most cases, often by half or more |
+| Fig. 10-15 | [`fig10_15_root_cause`](experiments/fig10_15_root_cause/) | overfitted root models, unbalanced trees, SMOs that do not fix the models, gap- and metadata-dominated space |
+| Fig. 16 | [`fig16_data_augmentation`](experiments/fig16_data_augmentation/) | 1% augmented keys mostly help LIPP and can hurt ALEX |
+| Fig. 17 | [`fig17_reconstruction`](experiments/fig17_reconstruction/) | with most of the data bulkloaded, LIPP beats ART and B+tree everywhere; ALEX needs more and still fails on hard datasets |
+
+**Notation.** A case is written `<sampling, bulkload size, insert pattern>`,
+e.g. `<uniform, 100M, shuffled>`, the paper's baseline:
+- the index is built (bulkloaded) on 100M keys sampled uniformly from the
+  200M-key dataset;
+- the other 100M are then inserted in shuffled order;
+- a lookup pass over all 200M keys follows.
+
+`full` builds on the whole dataset and inserts nothing; `segmented` samples a
+contiguous key range. The result files name these cases by
+`test_suite`:
+
+| `test_suite` | sampling | insert pattern |
+| --- | --- | --- |
+| 10 | full | none |
+| 21 | uniform | sorted |
+| 22 | uniform | shuffled |
+| 41 | segmented | sorted |
+| 42 | segmented | shuffled |
+
+`preload_suite` 33 and 34 add 1% keys from the uint64 or the dataset key
+space (Fig. 16).
+
+## 2. Layout
+
+```text
+LICENSE                     MIT (the index submodules keep their own licenses)
+reproduce.sh                every measurement grid of the paper (used by run_all.sh)
+run.py, build.sh, src/      the benchmark
+run_case_profiling.sh       the Section 5 profiling cases
+artifact/
+  README.md                 this guide
+  requirements.txt          pinned Python packages
+  run_small.sh              subset: key cases of every claim
+  run_all.sh                full set: every grid + profiling
+  data/
+    fetch.sh, SHA256SUMS    datasets into datasets/, verified
+    fetch_reference.sh      the released measurements into artifact/reference/
+  experiments/<claim>/      one directory per paper result: README.md + run.sh
+  plot/
+    plot.py                 runs the paper's notebooks on reference/ or results/
+    notebooks/              the paper's plotting notebooks (copies of result/, profiling_result/)
+  lib/
+    gen_cases.py            builds the case set (cases.json) from the released measurements
+    run_cases.py            runs cases, one at a time, into results/
+    analyze.py              recomputes the paper's quoted numbers and Tables 1-2 (SUMMARY.md)
+    layout.py, common.sh    shared paths and shell steps
+    vendor_submodules.sh    offline only: extracts the index sources when git submodules cannot be fetched
+generated by the scripts (not in git):
+  artifact/reference/       the released measurements
+  artifact/results/         your measurements
+  artifact/figures/         paper/, results/, profiling/ (each with MANIFEST.md)
+  artifact/cases.json       the case set
+  artifact/SUMMARY.md       recomputed numbers and Tables 1-2 (+ summary.json)
+```
+
+**Results** are written under the file names the paper's notebooks read:
+one file per measurement grid, never one file per run.
+
+| file in `artifact/results/` | records |
+| --- | --- |
+| `single_thread_thp.csv`, `multi_thread_thp.csv` | lookup and insert throughput, with space |
+| `single_thread_tail_lat.csv`, `multi_thread_tail_lat.csv` | 99.9th-percentile latency |
+| `memory_consumption.csv` | space, derived from the two throughput files |
+| `single_thread_thp.alex_oob.csv` | ALEX with one outlier in the bulkload |
+| `single_thread_thp.alex_lipp_preload_1_100_{uint64,dataset}.csv` | bulkload with 1% augmented keys |
+| `single_thread_thp.alex_lipp_extended.csv` | extra bulkload sizes (full set only) |
+| `*_fail_case.log` | run.py's `Failed command:` lines |
+| `status.json`, `logs/` | per-case status and stdout |
+
+The subset runner appends each case to its file and replaces earlier records
+of the same case on `--force`. The full set writes whole files. Both use the
+same names, so the full set supersedes the subset.
+
+**`artifact/SUMMARY.md`** is written by every entry point. It recomputes from
+the released measurements each number the paper's text quotes, plus Tables 1
+and 2, and compares them with the printed values. This checks the scripts; it
+is not a measurement of your machine. Once `artifact/results/` holds your
+runs, it adds a table that compares them with the released measurements of
+the same cases.
+
+## 3. Running
+
+**Subset.** `run_small.sh` runs the cases one at a time, pinned to CPU 1
+(CPUs 1-16 for 16-thread cases), as the paper ran them. Concurrent cases slow
+each other down by different amounts, so there is no parallel mode.
+
+`artifact/lib/gen_cases.py` derives the cases from the released
+measurements, so no case is hand-picked. For every (dataset, index) it takes:
+- the baseline `<uniform, 100M, shuffled>`;
+- the full build `<full, 200M>`;
+- the argmin and argmax of the metric each figure plots: lookup throughput,
+  worst insert, 99.9th latency, space.
+
+To those it adds the one-variable sensitivity cases, the worst released
+outlier pairs and the largest augmentation gain and loss. A configuration two
+experiments need is one case.
+
+| experiment | default (`claims`) | `--tier figures` adds | `--full` runs (reproduce.sh) |
+| --- | --- | --- | --- |
+| `fig03_tab1_single_thread` | 23 runs, ~55 min | 22 runs | `test_ro_thp_single_thread`, 62 h |
+| `fig04_tab2_multi_thread` | 14 runs, ~5 min | - | `test_ro_thp_multi_thread`, 13 h |
+| `fig05_06_tail_latency` | 10 runs, ~50 min | 96 runs, ~2.3 h | `test_ro_lat_{single,multi}_thread`, 37 h |
+| `fig07_space` | 5 runs, ~10 min | 2 runs | both throughput grids, 75 h |
+| `fig08_sensitivity` | 18 runs, ~20 min | 88 runs, ~3.6 h | `test_ro_thp_single_thread`, 62 h |
+| `fig09_out_of_bound` | 9 runs, ~25 min | 4 runs | + `test_ro_thp_single_thread_extended_oob`, 4 h |
+| `fig10_15_root_cause` | the profiling cases, ~2-3 h | - | same |
+| `fig16_data_augmentation` | 6 runs, ~25 min | - | + `test_ro_thp_single_thread_data_augmentation`, 25 h |
+| `fig17_reconstruction` | - (needs `--full`) | - | + `test_ro_thp_single_thread_extended_bulksize`, 9 h |
+
+Times are operations only, estimated from the paper's throughputs; loading
+the dataset and bulkloading come on top. Experiments share grids: e.g.
+`fig09_out_of_bound --full` reuses the single-threaded grid if
+`fig03_tab1_single_thread --full` already ran it.
+
+**`run_small.sh` options.**
+* `--tier`:
+  * `claims` (default): the cases above;
+  * `figures`: the remaining cases Fig. 5, 6 and 8 plot on all datasets (run it after the default);
+  * `core`: every extreme of B+tree, ART, ALEX, LIPP and their OLC variants;
+  * `extended`: only the DyTIS, DILI, FINEdex and SALI extremes.
+* `--experiments "..."` and `--datasets "..."` restrict the selection.
+* `--force` reruns finished cases.
+* `--plots-only` runs nothing.
+
+**Smoke test.** A reduced dataset exercises the build and the scripts only.
+It is not evidence for any finding, because bulkload sizes and tree shapes
+change with the scale.
+
+```bash
+python3 run.py --index=lipp --dataset=linear --concurrency=1 \
+  --sampling_method=segmented --bulkload_size=1000000 --insert_pattern=sorted \
+  --dataset_size=2000000 --table_size=2000000 --taskset=1-1 --output_path=/tmp/smoke.csv
+```
+
+`/tmp/smoke.csv` holds one `insert` and one `lookup` record. Add
+`--out_of_bound_inject=True` or `--preload_suite=33` to exercise the Fig. 9 and
+Fig. 16 paths.
+
+## 4. Figures
+
+There is one plotting implementation: the paper's notebooks in
+`artifact/plot/notebooks/`. `artifact/plot/plot.py` stages their input files
+in a scratch directory and runs their code cells there. The outputs carry the
+file names of the paper's figures.
+
+| mode | input | output |
+| --- | --- | --- |
+| `--mode paper` | `artifact/reference/` | `artifact/figures/paper/` |
+| `--mode results` | `artifact/results/` only, no released row mixed in | `artifact/figures/results/`, each PDF stamped with the configurations and datasets it was drawn from |
+| `--mode profiling` | `artifact/results/profiling_log/` | `artifact/figures/profiling/` |
+
+Each output directory gets a `MANIFEST.md` listing what each notebook drew.
+An experiment's `run.sh` writes `MANIFEST.<experiment>.md` instead.
+
+| paper | file | notebook |
+| --- | --- | --- |
+| Fig. 3, 8a-c | `single_thread_overall_thp.pdf`, `sensitivity_impact_of_{bulkload_size,insert_pattern,sampling_method}.pdf` | `results/single_thread.ipynb` |
+| Fig. 4 | `multi_thread_overall_thp.pdf` | `results/multi_thread.ipynb` |
+| Fig. 5, 6 | `single_thread_lat_overall.pdf`, `multi_thread_lat_overall.pdf` | `results/{single,multi}_thread_tail_lat.ipynb` |
+| Fig. 7 | `memory_consumption_overall.pdf` | `results/memory_consumption.ipynb` |
+| Fig. 9 | `alex_read_throughput_change_ratio_under_oob.pdf` | `results/analysis_alex_oob.ipynb` |
+| Fig. 10-15 | `lipp_overfit_*`, `alex_overfit_*`, `*_treeheight_cdf`, `alex_cmp_cdf`, `alex_depth_smo`, `memory_breakdown`, `alex_memory_{1,2}` | `profiling/analysis_{overfit,depth,smo,memory}.ipynb` |
+| Fig. 16 | `alex_lipp_read_throughput_change_ratio_under_preload.pdf` | `results/analysis_preload.ipynb` |
+| Fig. 17 | `alex_lipp_read_throughput_better_than_trad.pdf` | `results/analysis_bulkload_variance.ipynb` |
+| Tables 1, 2 | `artifact/SUMMARY.md` | `artifact/lib/analyze.py` |
+
+In results mode, a figure is drawn as soon as your results hold the cases it
+plots:
+- Fig. 3, 4, 7, 8b, 9 and 16 after the default subset;
+- Fig. 5, 6, 8a and 8c after `--tier figures`;
+- Fig. 17 after the full set.
+
+## 5. Root-cause profiling (Fig. 10-15)
+
+`bash artifact/experiments/fig10_15_root_cause/run.sh` does four things:
+1. builds the instrumented binary (`build.sh profiling`: `-DPROFILING`,
+   `-DROOT_PROFILING`);
+2. runs the cases of `run_case_profiling.sh` into
+   `artifact/results/profiling_log/`;
+3. rebuilds the release binary (`build.sh` always recreates `build/`);
+4. draws the figures.
+
+The instrumentation changes throughput, so no throughput case runs on that
+binary. The paper's profiling logs were not released, so these figures are
+always regenerated.
+
+## 6. Reviewer checklist
+
+* [ ] `bash artifact/run_small.sh --plots-only` exits 0, and
+  `artifact/SUMMARY.md` reports 31/31 numbers within tolerance, Table 1 21/21
+  and Table 2 36/36.
+* [ ] `artifact/figures/paper/` holds 11 PDFs (Fig. 3-9, 16, 17).
+* [ ] `bash artifact/run_small.sh` finishes, and `artifact/results/status.json`
+  lists every case.
+* [ ] The trend of every experiment's `README.md` holds in
+  `artifact/figures/results/` and in your result files.
+* [ ] `fig10_15_root_cause/run.sh` produces the 11 root-cause PDFs.
