@@ -33,7 +33,7 @@ jobs:
       run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }}
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
         path: ${{ github.workspace }}/build/microbench # Adjust the path as necessary to include the output files
