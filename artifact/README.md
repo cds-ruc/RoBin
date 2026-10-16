@@ -1,12 +1,19 @@
 # RoBin Artifact Evaluation
 
-Reviewer guide for *Understanding Robustness Issues of Updatable Learned Indexes*,
-following the [SIGMOD ARI guidelines](https://reproducibility.sigmod.org/#Guidelines).
+Artifact of the SIGMOD 2026 paper *Understanding Robustness Issues of
+Updatable Learned Indexes: [Experiments & Analysis]*
+([PACMMOD, DOI 10.1145/3749188](https://dl.acm.org/doi/abs/10.1145/3749188)),
+prepared for the [SIGMOD ARI guidelines](https://reproducibility.sigmod.org/#Guidelines).
+This guide is self-contained: it starts from an empty directory and every
+command after the clone runs from the repository root.
 
-The repository ships the benchmark, the scripts and the paper's plotting
-notebooks, and no measurements of ours. Your runs fill `artifact/results/`.
-The paper's own measurements are on the `conf_rel` branch; the scripts use
-them to redraw the paper's figures and as the comparison point for your runs.
+* Repository: https://github.com/cds-ruc/RoBin
+* Benchmark: `run.py` driving `./build/microbench` (C++17), with the compared
+  indexes as git submodules from https://github.com/cds-ruc/IndexRepo.
+* The paper's measurements: the repository's `conf_rel` branch. The scripts
+  use them to redraw the paper's figures and as the comparison point for your
+  runs. Nothing else in the checkout is a measurement; your runs fill
+  `artifact/results/`.
 
 ## At a glance
 
@@ -14,28 +21,46 @@ them to redraw the paper's figures and as the comparison point for your runs.
 6). Figures 1 (design diagram) and 2 (dataset CDFs) are descriptive and back
 no claim. §1 maps every key result to its experiment directory.
 
-**Setup** (once, from the repository root):
+**Software.** Linux x86-64 (developed on Ubuntu 22.04), `git`, `bash`,
+Python ≥ 3.11 with `pip`. To build and run cases also: CMake ≥ 3.14, a C++17
+compiler (GCC 11 used), `apt` for the libraries `build.sh` installs, `wget`
+and `sha256sum` for the datasets, and optionally `numactl`.
+
+**Setup.**
 
 ```bash
-git fetch origin conf_rel                 # the paper's released measurements (a plain clone has it)
-pip install -r artifact/requirements.txt  # Python 3.11: pandas, numpy, matplotlib, seaborn, pinned
-# everything below the first entry point also needs:
-bash build.sh release                     # ./build/microbench; installs libtbb, libmkl, libjemalloc,
-                                          # libboost with apt, so run it as root or preinstall them
+# 1. clone the repository (every entry point)
+git clone https://github.com/cds-ruc/RoBin.git
+cd RoBin
+
+# 2. Python packages (every entry point)
+pip install -r artifact/requirements.txt  # pandas, numpy, matplotlib, seaborn, pinned
+
+# 3. build and datasets (entry points that run cases)
+bash build.sh release                     # fetches the 15 index submodules, installs libtbb, libmkl,
+                                          # libjemalloc, libboost with apt (run as root or preinstall
+                                          # them), then builds ./build/microbench
 bash artifact/data/fetch.sh               # the four datasets, 8.0 GB, checksums verified
-export numanode=0                         # NUMA node to bind to
+export numanode=0                         # NUMA node to bind to; needed when numactl is installed
 ```
+
+A full clone already includes the `conf_rel` branch, and the scripts read it
+from there; there is nothing to download separately. A shallow (`--depth`)
+or `--single-branch` clone lacks it; add it with
+`git fetch origin conf_rel:refs/remotes/origin/conf_rel`. The index
+submodules are needed only to build, so step 3 fetches them; cloning with
+`--recursive` instead is equivalent.
 
 **Entry points.** Every case loads all 200M keys, so the paper's full grid is
 ~150 h of single-core work. Pick one:
 
 | command | what it reproduces | time | needs |
 | --- | --- | --- | --- |
-| `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and every number the text quotes, recomputed from the released measurements | ~1 min | first two setup lines |
-| `bash artifact/run_small.sh` | subset: the key cases of every claim except Fig. 17 (which needs the full grid), at full scale, on your machine | ~3 h | full setup and hardware |
-| `bash artifact/run_small.sh --tier figures` | after the default subset: the cases Fig. 5, 6 and 8 need to be redrawn completely from your runs | ~6 h | full setup and hardware |
-| `bash artifact/run_all.sh` | full set: every grid of the paper and the Section 5 profiling | ~1 week | full setup and hardware |
-| `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | full setup and hardware |
+| `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and every number the text quotes, recomputed from the released measurements | ~1 min | setup steps 1-2 |
+| `bash artifact/run_small.sh` | subset: the key cases of every claim except Fig. 17 (which needs the full grid), at full scale, on your machine | ~3 h | setup steps 1-3, hardware below |
+| `bash artifact/run_small.sh --tier figures` | after the default subset: the cases Fig. 5, 6 and 8 need to be redrawn completely from your runs | ~6 h | setup steps 1-3, hardware below |
+| `bash artifact/run_all.sh` | full set: every grid of the paper and the Section 5 profiling | ~1 week | setup steps 1-3, hardware below |
+| `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | setup steps 1-3, hardware below |
 
 **Hardware.**
 * Minimum: Linux x86-64, ≥ 17 logical CPUs (16-thread cases run on CPUs
