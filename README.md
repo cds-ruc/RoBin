@@ -57,7 +57,7 @@ make -j
 ```
 or just run the following script:
 ```shell
-bash build.sh
+bash build.sh release
 ```
 
 ### Reproduce
@@ -69,18 +69,34 @@ Benchmark all the competitors via RoBin with the following command:
 bash reproduce.sh
 ```
 
-The results will be stored in the `results` directory.
+The results will be stored in the `result` directory.
 
 Using the jupyter notebook to plot the results:
 ```shell
-cd results
+cd result
 # open and run the following jupyter notebook to reproduce the figure in our paper
 # such as single_thread.ipynb and etc.
 ```
 
+### Artifact evaluation (AE)
+
+`artifact/` is the reviewer-facing package, organised by the paper's claims
+(`artifact/experiments/<claim>/`).
+
+```bash
+bash artifact/run_small.sh --plots-only   # the paper's figures and quoted numbers from its released measurements, ~1 min
+bash artifact/run_small.sh                # subset: the key cases of every claim on your machine, ~3 h
+bash artifact/run_all.sh                  # full set: every grid of the paper, ~1 week
+bash artifact/experiments/fig09_out_of_bound/run.sh [--full]   # one claim
+```
+
+See [artifact/README.md](artifact/README.md) for setup, hardware, runtimes and
+the trend every figure should show.
+
 ### Profiling
 
-Build with the flag "PROFILING":
+Build with the flag "PROFILING" (also enables the root-model logs needed by the
+statistics notebooks):
 ```shell
 rm -rf build
 mkdir -p build
@@ -92,6 +108,10 @@ or just run the following script:
 ```shell
 bash build.sh profiling
 ```
+
+The profiling scripts read the datasets and write their logs relative to the
+repository root by default; override with `DATASET_DIR=/path/to/datasets` and
+`LOG_DIR=/path/to/log`.
 
 **Note that our code modifications for profiling have no impact on index performance when building without this flag for benchmark test.**
 

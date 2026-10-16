@@ -3388,9 +3388,20 @@ public:
   }
 
   void print_stat(bool header = false, bool clear_flag = true) {
+    // Tag every record with the phase it actually measures, so downstream
+    // analysis never mixes bulkload-only cost (test_suite 10) into insert
+    // throughput or insert tail latency.
+    std::string measurement_phase = "mixed";
+    if (read_ratio > 0.9999) {
+      measurement_phase = "lookup";
+    } else if (insert_ratio > 0.9999) {
+      measurement_phase = "insert";
+    }
     if (test_suite == 10 && insert_ratio == 1.0 && stat.throughput == 0) {
-      // lookup baseline. calc the bulkload throughput
+      // lookup baseline. calc the bulkload throughput.
+      // This record measures construction only; it is NOT an insert run.
       stat.throughput = table_size * 1000000000 / bulkload_duration;
+      measurement_phase = "bulkload";
     }
 
     double avg_latency = 0;
@@ -3497,7 +3508,7 @@ public:
                ",";
       ofile << "partition_num"
                ","
-            << std::endl;
+            << "measurement_phase" << std::endl;
     }
 
     std::ofstream ofile;
@@ -3549,7 +3560,8 @@ public:
     ofile << test_suite << ",";
     ofile << preload_suite << ",";
     ofile << partition_method << ",";
-    ofile << partition_num << std::endl;
+    ofile << partition_num << ",";
+    ofile << measurement_phase << std::endl;
     ofile.close();
 
     if (clear_flag)

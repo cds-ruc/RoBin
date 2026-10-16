@@ -69,6 +69,30 @@ def main():
     parser.add_argument("--preload_suite", required=False, default=0, help="preload suite")
     parser.add_argument("--out_of_bound_inject", required=False, default=False, help="out_of_bound_inject suite")
     parser.add_argument("--tail_lat", required=False, default=False, help="tail latency")
+    parser.add_argument(
+        "--latency_sample_ratio",
+        required=False,
+        default=1,
+        help="fraction of operations whose latency is recorded (1 = every operation)",
+    )
+    parser.add_argument(
+        "--output_path",
+        required=False,
+        default="./out.csv",
+        help="CSV file the benchmark appends its records to",
+    )
+    parser.add_argument(
+        "--dataset_size",
+        required=False,
+        default=200000000,
+        help="total number of keys of the dataset; used to derive init_table_ratio",
+    )
+    parser.add_argument(
+        "--table_size",
+        required=False,
+        default=-1,
+        help="cap on the number of loaded keys (-1 = load the whole dataset)",
+    )
     
     args = parser.parse_args()
 
@@ -82,8 +106,9 @@ def main():
         print(f"binding with numa node: {numanode}")
         numactl_arg = f"numactl --cpunodebind={numanode} --membind={numanode}"
 
-    # 计算 init_table_ratio
-    init_table_ratio = float(args.bulkload_size) / 200000000
+    # 计算 init_table_ratio（相对数据集真实规模，支持 smoke 时缩小数据集）
+    dataset_size = float(args.dataset_size)
+    init_table_ratio = float(args.bulkload_size) / dataset_size
 
     test_suite = 0
 
@@ -120,9 +145,9 @@ def main():
     #         print(f"Unknown insert pattern: {args.insert_pattern}")
     #         sys.exit(1)
     elif args.sampling_method == "full":
-        if args.bulkload_size != "200000000" or args.insert_pattern != "sorted":
+        if int(args.bulkload_size) != int(dataset_size) or args.insert_pattern != "sorted":
             print(
-                f"Full sampling only supports bulkload size 200000000 and insert pattern sorted"
+                f"Full sampling only supports bulkload size equal to the dataset size ({int(dataset_size)}) and insert pattern sorted"
             )
             sys.exit(1)
         else:
@@ -158,10 +183,12 @@ def main():
     
     latency_sampling_arg = ""
     if args.tail_lat:
-        latency_sampling_arg = " --latency_sample --latency_sample_ratio=1"
+        latency_sampling_arg = (
+            f" --latency_sample --latency_sample_ratio={args.latency_sample_ratio}"
+        )
 
     # command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --sample_round={args.sampling_round} --thread_num={args.concurrency} {partition_arg} --index={args.index} --preload_suite={args.preload_suite} --memory {oob_arg} {latency_sampling_arg}"
-    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index} --preload_suite={args.preload_suite} --memory {oob_arg} {latency_sampling_arg}"
+    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size={args.table_size} --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index} --preload_suite={args.preload_suite} --memory --output_path={args.output_path} {oob_arg} {latency_sampling_arg}"
     print(f"Running command: {command}")
     try:
         proc = subprocess.Popen(command.split())

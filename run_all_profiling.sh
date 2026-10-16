@@ -2,6 +2,8 @@
 
 datasets=("linear" "covid" "fb-1" "osm")
 indexs="alex,lipp,alexolc,sali"
+DATASET_DIR="${DATASET_DIR:-./datasets}"
+LOG_DIR="${LOG_DIR:-./log}"
 batch=1
 
 for dataset in ${datasets[@]}
@@ -12,7 +14,7 @@ do
         for ((i=1; i<=batch; i++))
         do
             ./build/microbench \
-            --keys_file=/home/dataset/gre_dataset/$dataset \
+            --keys_file=$DATASET_DIR/$dataset \
             --keys_file_type=binary \
             --read=0.0 --insert=0.0 \
             --update=0.0 --scan=0.0  --delete=0.0 \
@@ -23,7 +25,7 @@ do
             --thread_num=1 \
             --index=$indexs
         done
-        TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+        TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
         if [ ! -d "$TARGET_DIR" ]; then
         mkdir -p "$TARGET_DIR"
         fi
@@ -37,7 +39,7 @@ do
             for ((i=1; i<=batch; i++))
             do
                 ./build/microbench \
-                --keys_file=/home/dataset/gre_dataset/$dataset \
+                --keys_file=$DATASET_DIR/$dataset \
                 --keys_file_type=binary \
                 --read=0.0 --insert=0.0 \
                 --update=0.0 --scan=0.0  --delete=0.0 \
@@ -48,7 +50,7 @@ do
                 --thread_num=1 \
                 --index=$indexs
             done
-            TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+            TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
             if [ ! -d "$TARGET_DIR" ]; then
             mkdir -p "$TARGET_DIR"
             fi
@@ -63,7 +65,7 @@ do
             for ((i=1; i<=batch; i++))
             do
                 ./build/microbench \
-                --keys_file=/home/dataset/gre_dataset/$dataset \
+                --keys_file=$DATASET_DIR/$dataset \
                 --keys_file_type=binary \
                 --read=0.0 --insert=0.0 \
                 --update=0.0 --scan=0.0  --delete=0.0 \
@@ -74,7 +76,7 @@ do
                 --thread_num=1 \
                 --index=$indexs
             done
-            TARGET_DIR="./log/$dataset/$test_suite/$init_table_ratio"
+            TARGET_DIR="$LOG_DIR/$dataset/$test_suite/$init_table_ratio"
             if [ ! -d "$TARGET_DIR" ]; then
             mkdir -p "$TARGET_DIR"
             fi
