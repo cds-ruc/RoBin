@@ -27,7 +27,9 @@ FILES=(
 )
 
 if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$REF_BRANCH" > /dev/null; then
-  echo "branch $REF_BRANCH not found: run 'git fetch origin conf_rel' first (or set REF_BRANCH)" >&2
+  echo "branch $REF_BRANCH not found (shallow or single-branch clone?):" >&2
+  echo "  git fetch origin conf_rel:refs/remotes/origin/conf_rel" >&2
+  echo "or set REF_BRANCH to a ref that holds the released result/*.csv" >&2
   exit 1
 fi
 
