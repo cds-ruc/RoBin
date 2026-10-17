@@ -38,6 +38,7 @@ FAMILY_EXPERIMENT = {
     "sensitivity": "fig08_sensitivity",
     "oob": "fig09_out_of_bound",
     "preload": "fig16_data_augmentation",
+    "reconstruction": "fig17_reconstruction",
 }
 
 DATASETS = ["linear", "covid", "fb-1", "osm"]
@@ -235,6 +236,7 @@ def main() -> None:
     memory = aggregate(memory_rows)
     oob_table = aggregate(oob_rows)
     preload_tables = {suite: aggregate(load_reference(name)) for suite, name in layout.PRELOAD_FILES.items()}
+    extended = aggregate(load_reference(layout.EXTENDED))
 
     cases: dict[str, dict] = {}
 
@@ -544,6 +546,26 @@ def main() -> None:
                 roles=["augmentation", "core"],
                 purpose=purpose if suite_value else "Section 6.1: same case without augmentation",
             )
+    # one configuration with both key spaces: ALEX on Linear loses with uint64
+    # keys and not with dataset keys (released: -38% vs +5%)
+    for suite_value in (33, 34, 0):
+        add(cases, family="preload", dataset="linear", index="alex", suite="22", bulkload_size=BASELINE_BULK,
+            preload_suite=suite_value, roles=["augmentation_keyspace", "core"],
+            purpose="Section 6.1: uint64 vs dataset key space, same case" if suite_value
+            else "Section 6.1: same case without augmentation")
+
+    # ---- Section 6.2: timely re-construction ------------------------------
+    # Fig. 17 at the bulkload fractions the text names, on an easy (Linear) and
+    # a hard (Face) dataset, <uniform, shuffled>: LIPP at 90%, ALEX at 60% and
+    # 100%; plus the B+tree/ART cases the thresholds average over.
+    for dataset in ("linear", "fb-1"):
+        for index, suite, bulk in (("lipp", "22", 180_000_000), ("alex", "22", 120_000_000), ("alex", "10", FULL_SIZE),
+                                   ("btree", "22", BASELINE_BULK), ("btree", "10", FULL_SIZE),
+                                   ("art", "22", BASELINE_BULK), ("art", "10", FULL_SIZE)):
+            add(cases, family="reconstruction", dataset=dataset, index=index, suite=suite, bulkload_size=bulk,
+                roles=["reconstruction", "core"],
+                purpose=f"Section 6.2: bulkload fraction {bulk * 100 // FULL_SIZE}%" if index in ("alex", "lipp")
+                else "Section 6.2: traditional-index threshold")
 
     # ---- "figures" tier: every case the Fig. 5/6/8 notebooks read --------
     # Those notebooks draw per-index reference lines (baseline, full build,
@@ -602,6 +624,10 @@ def main() -> None:
         # Section 6.1: data augmentation
         ("preload", "linear", ("lipp",), ("augmentation",)),
         ("preload", "fb-1", ("alex",), ("augmentation",)),
+        # Section 6: key-space pair for Fig. 16, bulkload fractions for Fig. 17
+        ("preload", "linear", ("alex",), ("augmentation_keyspace",)),
+        *[("reconstruction", dataset, ("btree", "art", "alex", "lipp"), ("reconstruction",))
+          for dataset in ("linear", "fb-1")],
     ]
     for family, dataset, index_pattern, roles in claims_selection:
         experiment = FAMILY_EXPERIMENT[family]
@@ -633,7 +659,8 @@ def main() -> None:
         elif entry["preload_suite"]:
             summary = preload_tables[entry["preload_suite"]].get(key)
         else:
-            summary = dict((single if entry["concurrency"] == 1 else multi).get(key) or {})
+            table = extended if entry["result_file"] == layout.EXTENDED else (single if entry["concurrency"] == 1 else multi)
+            summary = dict(table.get(key) or {})
             space = (memory.get(key) or {}).get("memory")
             if space:
                 summary["memory"] = space

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Subset reproduction of RoBin: the key cases of the throughput, latency and
-# space claims (Fig. 3-9, 16), at full scale.  Fig. 10-15 (profiling) are
-# artifact/experiments/fig10_15_root_cause/run.sh; Fig. 17 needs run_all.sh.
+# Subset reproduction of RoBin: the key cases of the throughput, latency, space
+# and mitigation claims (Fig. 3-9, 16, 17), at full scale.  Fig. 10-15
+# (profiling) are artifact/experiments/fig10_15_root_cause/run.sh.
 #
 #   released measurements -> case set -> key cases on this machine (one at a
 #   time, ~4 h for the claims tier) -> claim verdicts -> every paper figure,

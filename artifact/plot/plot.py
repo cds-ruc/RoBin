@@ -165,7 +165,9 @@ def restrict_to_present(source: str, present: set[str]) -> str:
 
     * indexes without a measured row are dropped from the cell's ``index_types``;
     * the overall figures keep only (dataset, index) groups holding both the
-      baseline and the full-build case they draw as reference lines.
+      baseline and the full-build case they draw as reference lines;
+    * Fig. 17 leaves out the bulkload fractions you have not measured (the
+      notebook would draw them as 0%) and marks the measured ones.
 
     The paper mode never calls this.
     """
@@ -195,6 +197,9 @@ def restrict_to_present(source: str, present: set[str]) -> str:
         source = (f"__ae_full = {name}\n{name} = __ae_complete({name})\ntry:\n"
                   + "".join("    " + line + "\n" for line in source.splitlines())
                   + f"finally:\n    {name} = __ae_full\n")
+    if "1.5*btree_mean_read_throughput" in source:
+        source = source.replace("ratios.append(0)", "ratios.append(float('nan'))")
+        source = source.replace("label=get_official_name(key_path))", "label=get_official_name(key_path), marker='o')")
     return source
 
 
