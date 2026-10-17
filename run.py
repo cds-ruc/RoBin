@@ -5,6 +5,40 @@ import subprocess
 import argparse
 
 
+def parse_cpus(spec):
+    """CPU list syntax of taskset/sysfs ("1-3,8") -> [1, 2, 3, 8]."""
+    cpus = []
+    for part in spec.split(","):
+        low, _, high = part.strip().partition("-")
+        cpus += range(int(low), int(high or low) + 1)
+    return cpus
+
+
+def cpus_on_node(requested, node):
+    """Keep a --taskset request on the NUMA node numactl binds memory to.
+
+    --taskset=1-N means "N CPUs, starting from CPU 1" (CPU 0 is left to the OS).
+    On machines that number CPUs round-robin across sockets (node 0 = 0,2,4,...),
+    CPU 1 sits on node 1 while numactl --membind keeps memory on node 0, so every
+    access would be remote.  Such a request is mapped to the same number of
+    CPUs of the bound node, again skipping its first CPU.
+    """
+    path = f"/sys/devices/system/node/node{node}/cpulist"
+    if not os.path.exists(path):
+        return requested
+    wanted = parse_cpus(requested)
+    local = parse_cpus(open(path).read().strip())
+    if set(wanted) <= set(local):
+        return requested
+    pool = local[1:] if len(local) > len(wanted) else local
+    if len(pool) < len(wanted):
+        print(f"warning: node {node} has {len(local)} CPUs, fewer than --taskset={requested} asks for")
+        return requested
+    mapped = ",".join(str(cpu) for cpu in pool[: len(wanted)])
+    print(f"taskset {requested} -> {mapped}: CPUs of numa node {node}, where memory is bound")
+    return mapped
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run RoBin")
     parser.add_argument(
@@ -159,6 +193,8 @@ def main():
     if args.taskset is None:
         args.taskset = ""
     else:
+        if numactl_arg:
+            args.taskset = cpus_on_node(args.taskset, numanode)
         args.taskset = "taskset -c " + args.taskset
     
     # keys_path2_arg=""

@@ -322,9 +322,13 @@ def _run_result_notebooks(mode: str, stage: Path, destination: Path, notebooks: 
             # comparison baseline when it is not listed first (outlier / augmentation)
             own = inputs if inputs[0] == "single_thread_thp.csv" else \
                 [csv_name for csv_name in inputs if csv_name != "single_thread_thp.csv"]
+            empty = []
             for csv_name in own:
-                measured_total += len(configurations(stage / csv_name))
+                measured = len(configurations(stage / csv_name))
+                measured_total += measured
                 released_total += len(configurations(REFERENCE / csv_name))
+                if measured == 0:
+                    empty.append(csv_name)
             for csv_name in inputs:
                 frame = pd.read_csv(stage / csv_name)
                 present |= set(frame["index_type"]) if "index_type" in frame else set()
@@ -332,8 +336,9 @@ def _run_result_notebooks(mode: str, stage: Path, destination: Path, notebooks: 
             stamp = (f"reproduced: {measured_total} of {released_total} configurations "
                      f"of the paper figure (artifact/results)")
             transform = (lambda source, present=present: restrict_to_present(source, present))
-            if measured_total == 0:
-                lines.append(f"| `{name}` | {coverage} | - | not run yet |")
+            if empty:
+                # e.g. Fig. 17 needs single_thread_thp.alex_lipp_extended.csv, written by the full set only
+                lines.append(f"| `{name}` | {coverage} | - | not drawn yet: no measured case in {', '.join(empty)} |")
                 continue
         errors = run_notebook(RESULT_NOTEBOOK_DIR / name, stage, transform, stamp, probe_datasets=mode == "results")
         produced = collect(stage / "fig", destination)

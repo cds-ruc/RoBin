@@ -57,14 +57,16 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 | command | what it reproduces | time | needs |
 | --- | --- | --- | --- |
 | `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and every number the text quotes, recomputed from the released measurements | ~1 min | setup steps 1-2 |
-| `bash artifact/run_small.sh` | subset: the key cases of every claim except Fig. 17 (which needs the full grid), at full scale, on your machine | ~3 h | setup steps 1-3, hardware below |
+| `bash artifact/run_small.sh` | subset: the key cases of every throughput, latency and space claim (Fig. 3-9, 16; not Fig. 17, which needs the full grid), at full scale, on your machine | ~4 h | setup steps 1-3, hardware below |
+| `bash artifact/experiments/fig10_15_root_cause/run.sh` | Section 5 root-cause figures (Fig. 10-15) from an instrumented build; not part of `run_small.sh` | ~2-3 h | setup steps 1-3, hardware below |
 | `bash artifact/run_small.sh --tier figures` | after the default subset: the cases Fig. 5, 6 and 8 need to be redrawn completely from your runs | ~6 h | setup steps 1-3, hardware below |
 | `bash artifact/run_all.sh` | full set: every grid of the paper and the Section 5 profiling | ~1 week | setup steps 1-3, hardware below |
 | `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | setup steps 1-3, hardware below |
 
 **Hardware.**
-* Minimum: Linux x86-64, ≥ 17 logical CPUs (16-thread cases run on CPUs
-  1-16), ≥ 48 GB RAM (the largest subset case is ALEX at ~37 GB), ~9 GB disk.
+* Minimum: Linux x86-64, ≥ 17 logical CPUs on the NUMA node the runs bind to
+  (16-thread cases use 16 of them, CPU 0 of the node is left free), ≥ 48 GB RAM
+  on that node (the largest subset case is ALEX at ~37 GB), ~9 GB disk.
 * Recommended: ≥ 64 GB RAM (the full set includes SALI at ~55 GB), 2 NUMA
   nodes with `numactl`.
 
@@ -80,6 +82,12 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 **Benign messages.**
 * `binding with numa node: 0`, and compiler warnings from the index
   submodules during `build.sh`.
+* `taskset 1-1 -> 2: CPUs of numa node 0, where memory is bound`: on machines
+  that number CPUs alternately across sockets (node 0 = CPUs 0, 2, 4, ...),
+  `run.py` moves the pinning onto the bound node so memory stays local.
+* `RuntimeWarning: invalid value encountered in scalar divide` from
+  `analysis_preload.ipynb` in results mode: a CDF of Fig. 16 whose cases you
+  have not run (the subset has no ALEX uint64 case); that curve's label reads `nan`.
 * `cell N: failed-case table skipped, *_fail_case.log not released` in
   `artifact/figures/paper/MANIFEST.md`: the paper's failed-case logs were not
   released, so those two notebook cells are skipped. The figures are
@@ -228,9 +236,10 @@ the same cases.
 
 ## 3. Running
 
-**Subset.** `run_small.sh` runs the cases one at a time, pinned to CPU 1
-(CPUs 1-16 for 16-thread cases), as the paper ran them. Concurrent cases slow
-each other down by different amounts, so there is no parallel mode.
+**Subset.** `run_small.sh` runs the cases one at a time, each pinned to one
+CPU (16 CPUs for 16-thread cases) of the NUMA node its memory is bound to.
+Concurrent cases slow each other down by different amounts, so there is no
+parallel mode.
 
 `artifact/lib/gen_cases.py` derives the cases from the released
 measurements, so no case is hand-picked. For every (dataset, index) it takes:
@@ -251,7 +260,7 @@ experiments need is one case.
 | `fig07_space` | 5 runs, ~10 min | 2 runs | both throughput grids, 75 h |
 | `fig08_sensitivity` | 18 runs, ~20 min | 88 runs, ~3.6 h | `test_ro_thp_single_thread`, 62 h |
 | `fig09_out_of_bound` | 9 runs, ~25 min | 4 runs | + `test_ro_thp_single_thread_extended_oob`, 4 h |
-| `fig10_15_root_cause` | the profiling cases, ~2-3 h | - | same |
+| `fig10_15_root_cause` | not in `run_small.sh`: run its `run.sh`, ~2-3 h | - | same |
 | `fig16_data_augmentation` | 6 runs, ~25 min | - | + `test_ro_thp_single_thread_data_augmentation`, 25 h |
 | `fig17_reconstruction` | - (needs `--full`) | - | + `test_ro_thp_single_thread_extended_bulksize`, 9 h |
 

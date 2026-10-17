@@ -13,8 +13,9 @@ plus ``memory_consumption.csv`` (derived from the two throughput files) and the
 stays in ``artifact/results/logs/``; ``artifact/results/status.json`` records
 each case as ok / failed / timeout.
 
-Cases run one at a time, pinned to CPU 1 (CPUs 1-16 for the 16-thread cases), as
-the paper ran them: concurrent cases slow each other down by different amounts.
+Cases run one at a time, pinned to one CPU (16 for the 16-thread cases) of the
+NUMA node memory is bound to (see run.py): concurrent cases slow each other
+down by different amounts.
 A finished case is skipped on the next invocation, so an interrupted run
 resumes; ``--force`` runs the selected cases again and replaces their records.
 

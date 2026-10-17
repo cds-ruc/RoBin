@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Subset reproduction of RoBin: the key cases of every claim, at full scale.
+# Subset reproduction of RoBin: the key cases of the throughput, latency and
+# space claims (Fig. 3-9, 16), at full scale.  Fig. 10-15 (profiling) are
+# artifact/experiments/fig10_15_root_cause/run.sh; Fig. 17 needs run_all.sh.
 #
 #   released measurements -> case set -> key cases on this machine (one at a
-#   time, ~3 h for the claims tier) -> claim verdicts -> every paper figure,
+#   time, ~4 h for the claims tier) -> claim verdicts -> every paper figure,
 #   drawn from the released data and from this machine's results
 #
 # Usage:
-#   bash artifact/run_small.sh                     # claims tier (~3 h)
+#   bash artifact/run_small.sh                     # claims tier (~4 h)
 #   bash artifact/run_small.sh --plots-only        # released data only: verdicts + figures (~1 min)
 #   bash artifact/run_small.sh --tier figures      # also the cases Fig. 5, 6, 8 draw (~6 h)
 #   bash artifact/run_small.sh --experiments "fig09_out_of_bound fig07_space"
@@ -27,7 +29,7 @@ while [ $# -gt 0 ]; do
     --datasets) DATASETS="$2"; shift 2 ;;
     --plots-only) PLOTS_ONLY=1; shift ;;
     --force) FORCE=1; shift ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
   esac
 done
