@@ -8,7 +8,7 @@
 
 | | command | time |
 | --- | --- | --- |
-| subset | `bash artifact/experiments/fig03_tab1_single_thread/run.sh` | claims tier, ~55 min |
+| subset | `bash artifact/experiments/fig03_tab1_single_thread/run.sh` | claims tier, ~1 h |
 | full grid | `bash artifact/experiments/fig03_tab1_single_thread/run.sh --full` | test_ro_thp_single_thread, ~62 h |
 | released data only | `bash artifact/experiments/fig03_tab1_single_thread/run.sh --plots-only` | ~1 min |
 

@@ -4,11 +4,11 @@
 
 **What to look at.** LIPP's CDFs mostly right of 0; ALEX's partly left of 0, the dataset curve right of the uint64 one.
 
-**How to check your runs.** Augmentation raises LIPP's lookup in both pairs and lowers ALEX's on Face.
+**How to check your runs.** In the largest released gain and loss cases, augmentation raises LIPP's lookup and lowers ALEX's on Face. On ALEX `<uniform, 100M, shuffled>` (Linear), uint64 keys lower the lookup while dataset keys do not.
 
 | | command | time |
 | --- | --- | --- |
-| subset | `bash artifact/experiments/fig16_data_augmentation/run.sh` | claims tier, ~25 min |
+| subset | `bash artifact/experiments/fig16_data_augmentation/run.sh` | claims tier, 9 runs, ~25 min |
 | full grid | `bash artifact/experiments/fig16_data_augmentation/run.sh --full` | test_ro_thp_single_thread + test_ro_thp_single_thread_data_augmentation, ~87 h |
 | released data only | `bash artifact/experiments/fig16_data_augmentation/run.sh --plots-only` | ~1 min |
 

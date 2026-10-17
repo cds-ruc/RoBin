@@ -68,6 +68,11 @@ EXPERIMENTS = {
 SINGLE_THP = "single_thread_thp.csv"
 MULTI_THP = "multi_thread_thp.csv"
 SPACE = "memory_consumption.csv"
+EXTENDED = "single_thread_thp.alex_lipp_extended.csv"
+# bulkload sizes of the main grid (reproduce.sh test_ro_thp_*); other sizes are
+# the extended sweep of Fig. 17 (test_ro_thp_single_thread_extended_bulksize)
+MAIN_BULKLOAD_SIZES = {0, 1_000_000, 2_000_000, 5_000_000, 10_000_000, 20_000_000,
+                       50_000_000, 100_000_000, 200_000_000}
 PRELOAD_FILES = {
     33: "single_thread_thp.alex_lipp_preload_1_100_uint64.csv",
     34: "single_thread_thp.alex_lipp_preload_1_100_dataset.csv",
@@ -87,6 +92,8 @@ def target_file(case: dict) -> str:
         return "single_thread_thp.alex_oob.csv"
     if case.get("preload_suite"):
         return PRELOAD_FILES[int(case["preload_suite"])]
+    if threads == 1 and int(case["bulkload_size"]) not in MAIN_BULKLOAD_SIZES:
+        return EXTENDED
     return SINGLE_THP if threads == 1 else MULTI_THP
 
 

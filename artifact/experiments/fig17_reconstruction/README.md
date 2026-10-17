@@ -4,11 +4,11 @@
 
 **What to look at.** LIPP curves reach 100% at high bulkload fractions; some ALEX curves never do.
 
-**How to check your runs.** With `--full`: the same shape. Without it, the figure is checked on the released data (`--plots-only`).
+**How to check your runs.** The subset measures `<uniform, shuffled>` on Linear (easy) and Face (hard): LIPP at the 90% bulkload fraction, ALEX at 60% and 100%, and the B+tree and ART cases the thresholds average over; the figure marks those fractions and leaves the others out. LIPP is above both thresholds on both datasets; ALEX is above both on Linear, and below both on Face even at 100%. With `--full`: the whole curve.
 
 | | command | time |
 | --- | --- | --- |
-| subset | `bash artifact/experiments/fig17_reconstruction/run.sh` | none: the figure is computed over the whole bulkload grid |
+| subset | `bash artifact/experiments/fig17_reconstruction/run.sh` | claims tier, 14 runs, ~25 min |
 | full grid | `bash artifact/experiments/fig17_reconstruction/run.sh --full` | test_ro_thp_single_thread + test_ro_thp_single_thread_extended_bulksize, ~71 h |
 | released data only | `bash artifact/experiments/fig17_reconstruction/run.sh --plots-only` | ~1 min |
 

@@ -165,7 +165,9 @@ def restrict_to_present(source: str, present: set[str]) -> str:
 
     * indexes without a measured row are dropped from the cell's ``index_types``;
     * the overall figures keep only (dataset, index) groups holding both the
-      baseline and the full-build case they draw as reference lines.
+      baseline and the full-build case they draw as reference lines;
+    * Fig. 17 leaves out the bulkload fractions you have not measured (the
+      notebook would draw them as 0%) and marks the measured ones.
 
     The paper mode never calls this.
     """
@@ -195,6 +197,9 @@ def restrict_to_present(source: str, present: set[str]) -> str:
         source = (f"__ae_full = {name}\n{name} = __ae_complete({name})\ntry:\n"
                   + "".join("    " + line + "\n" for line in source.splitlines())
                   + f"finally:\n    {name} = __ae_full\n")
+    if "1.5*btree_mean_read_throughput" in source:
+        source = source.replace("ratios.append(0)", "ratios.append(float('nan'))")
+        source = source.replace("label=get_official_name(key_path))", "label=get_official_name(key_path), marker='o')")
     return source
 
 
@@ -322,9 +327,13 @@ def _run_result_notebooks(mode: str, stage: Path, destination: Path, notebooks: 
             # comparison baseline when it is not listed first (outlier / augmentation)
             own = inputs if inputs[0] == "single_thread_thp.csv" else \
                 [csv_name for csv_name in inputs if csv_name != "single_thread_thp.csv"]
+            empty = []
             for csv_name in own:
-                measured_total += len(configurations(stage / csv_name))
+                measured = len(configurations(stage / csv_name))
+                measured_total += measured
                 released_total += len(configurations(REFERENCE / csv_name))
+                if measured == 0:
+                    empty.append(csv_name)
             for csv_name in inputs:
                 frame = pd.read_csv(stage / csv_name)
                 present |= set(frame["index_type"]) if "index_type" in frame else set()
@@ -332,8 +341,9 @@ def _run_result_notebooks(mode: str, stage: Path, destination: Path, notebooks: 
             stamp = (f"reproduced: {measured_total} of {released_total} configurations "
                      f"of the paper figure (artifact/results)")
             transform = (lambda source, present=present: restrict_to_present(source, present))
-            if measured_total == 0:
-                lines.append(f"| `{name}` | {coverage} | - | not run yet |")
+            if empty:
+                # e.g. Fig. 17 needs single_thread_thp.alex_lipp_extended.csv, written by the full set only
+                lines.append(f"| `{name}` | {coverage} | - | not drawn yet: no measured case in {', '.join(empty)} |")
                 continue
         errors = run_notebook(RESULT_NOTEBOOK_DIR / name, stage, transform, stamp, probe_datasets=mode == "results")
         produced = collect(stage / "fig", destination)

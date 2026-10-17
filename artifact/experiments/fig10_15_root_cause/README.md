@@ -13,7 +13,7 @@
 | figures from existing logs | `bash artifact/experiments/fig10_15_root_cause/run.sh --plots-only` | ~1 min |
 
 The step builds the instrumented binary (`build.sh profiling`: `-DPROFILING` and
-`-DROOT_PROFILING`), runs the nine cases of `run_case_profiling.sh` into
+`-DROOT_PROFILING`), runs the ten cases of `run_case_profiling.sh` into
 `artifact/results/profiling_log/`, and rebuilds the release binary. The paper's
 own profiling logs were not released, so these figures are always regenerated.
 

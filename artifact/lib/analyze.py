@@ -21,8 +21,8 @@ Two verdict blocks are produced:
 
 * **reference vs paper** - every published number recomputed from the paper's own
   measurements; this checks that the scripts compute what the paper prints.
-* **results vs reference** - the same metrics on this machine's results, compared
-  with the reference restricted to the very same dataset/index subset.
+* **results vs reference** - the same metrics on this machine's results and on
+  the released measurements, both restricted to the cases present in both.
 
 Outputs
 -------
@@ -220,6 +220,18 @@ def aggregate(frame: pd.DataFrame) -> pd.DataFrame:
     ).reset_index()
 
 
+# a case: one configuration, one phase, one result table
+CASE_KEYS = ["dataset", "index_type", "suite", "bulkload_m", "thread_num", "tail_lat", "table", "oob", "phase"]
+
+
+def same_cases(agg: pd.DataFrame) -> pd.DataFrame:
+    """Rows of both sources whose case was measured by both."""
+    ref = agg[agg["source"] == "reference"][CASE_KEYS].drop_duplicates()
+    fresh = agg[agg["source"] == "fresh"][CASE_KEYS].drop_duplicates()
+    common = ref.merge(fresh, on=CASE_KEYS)
+    return agg.merge(common, on=CASE_KEYS)
+
+
 def pct(new: float, base: float) -> float:
     return (new - base) / base * 100 if base else float("nan")
 
@@ -284,7 +296,9 @@ def compute_metrics(agg: pd.DataFrame, source: str, datasets: list[str]) -> dict
     multi_w = write_grid(agg, source, 16)
     tail_single = tail_grid(agg, source, 1)
     tail_multi = tail_grid(agg, source, 16)
-    space = agg[(agg["source"] == source) & (agg["memory"] > 0)].drop_duplicates(
+    # memory_consumption.csv only: tail-latency runs also record space on this
+    # machine, but the released tail-latency CSVs carry 0 there
+    space = agg[(agg["source"] == source) & (agg["table"] == "space") & (agg["memory"] > 0)].drop_duplicates(
         subset=["dataset", "index_type", "suite", "bulkload_m", "thread_num"]
     )
     metrics: dict[str, float | None] = {}
@@ -505,82 +519,62 @@ def reference_checks(metrics: dict, notes: dict) -> list[dict]:
     return checks
 
 
-def machine_factor(agg: pd.DataFrame, datasets: list[str]) -> tuple[float | None, int]:
-    """Median throughput ratio (this machine / paper) over matched cases.
+def machine_factor(common: pd.DataFrame) -> tuple[float | None, int]:
+    """Median throughput ratio (your results / released) over the cases both measured.
 
-    The paper's numbers were taken on a Xeon Gold 5220; another machine - or the
-    same one with several cases in flight - reaches a different absolute
-    throughput.  Every claim in the paper is a *relative* statement (learned vs
-    traditional, best vs worst case), so the AE re-measurement is normalised by
-    this factor before it is compared with the reference.
+    Shown as context only: absolute throughput depends on the CPU, the claims
+    are relative (learned vs traditional, best vs worst case), so no verdict is
+    scaled by it.  Space and latency cases are left out.
     """
-    matched = []
-    reference = agg[(agg["source"] == "reference") & agg["dataset"].isin(datasets)]
-    fresh = agg[(agg["source"] == "fresh") & agg["dataset"].isin(datasets)]
-    keys = ["dataset", "index_type", "suite", "phase", "thread_num", "bulkload_m"]
-    merged = fresh.merge(reference, on=keys, suffixes=("_fresh", "_ref"))
-    for _, row in merged.iterrows():
-        base = float(row["throughput_ref"])
-        if base > 0:
-            matched.append(float(row["throughput_fresh"]) / base)
-    if not matched:
+    rows = common[common["table"].isin(["thp", "oob", "extended"])]
+    merged = rows[rows["source"] == "fresh"].merge(
+        rows[rows["source"] == "reference"], on=CASE_KEYS, suffixes=("_fresh", "_ref"))
+    merged = merged[merged["throughput_ref"] > 0]
+    if merged.empty:
         return None, 0
-    matched.sort()
-    return matched[len(matched) // 2], len(matched)
+    return float((merged["throughput_fresh"] / merged["throughput_ref"]).median()), len(merged)
 
 
-def fresh_checks(metrics_fresh: dict, metrics_reference_subset: dict, datasets: list[str],
-                 indexes: list[str], factor: float | None) -> list[dict]:
-    scope = f"{len(datasets)} datasets ({', '.join(datasets)}), {len(indexes)} indexes"
-    divisor = factor if factor else 1.0
-    normalize = (
-        f"fresh values divided by the machine factor {factor:.2f} "
-        f"(median fresh/paper throughput over matched cases); "
-        if factor
-        else "machine factor not available (1.0); "
-    )
+def fresh_checks(metrics_fresh: dict, metrics_released: dict) -> list[dict]:
+    """Each metric on your results vs the same metric on the released measurements of the same cases.
+
+    Within 20% means relative to the released value (as Tables 1-2); a share of
+    0% must stay 0%.
+    """
     checks = []
     for key, (claim, _published, _tol, unit) in PAPER.items():
-        measured = metrics_fresh.get(key)
-        expected = metrics_reference_subset.get(key)
-        if measured is None or expected is None:
+        measured, expected = metrics_fresh.get(key), metrics_released.get(key)
+        if measured is None or expected is None or measured != measured or expected != expected:
             continue
-        checks.append(make_check(
-            f"[fresh] {claim}", measured / divisor, round(float(expected), 4), 20, unit,
-            notes=normalize + f"compared with the reference on the same scope: {scope}",
-        ))
+        check = make_check(f"[fresh] {claim}", measured, round(float(expected), 4), abs(float(expected)) * 0.2, unit)
+        checks.append(check)
     return checks
 
 
-def paper_tables(agg: pd.DataFrame, datasets: list[str], factor: float | None) -> list[str]:
+def paper_tables(agg: pd.DataFrame, datasets: list[str]) -> list[str]:
     """Markdown reproduction of the paper's two printed tables.
 
-    Per cell: the value printed in the paper and the value recomputed from the
-    released CSVs; once ``artifact/results/`` holds insert measurements, also
-    this machine's value (divided by the machine factor).  The verdict is taken
-    from the released CSVs whenever they contain the case.
+    Per cell: the value printed in the paper, the value recomputed from the
+    released CSVs (the slowest released insert case) and, once
+    ``artifact/results/`` holds that very case, your measurement of it.  The
+    verdict compares the released CSVs with the paper.
     """
-    divisor = factor if factor else 1.0
     single_thread_indexes = set(PAPER_TABLE1["indexes"])
     has_results = not (write_grid(agg, "fresh", 1).empty and write_grid(agg, "fresh", 16).empty)
     lines: list[str] = []
     for spec, threads, note in ((PAPER_TABLE1, 1, "single-threaded"), (PAPER_TABLE2, 16, "16-threaded")):
         stem = "tab1_single_insert_worst" if threads == 1 else "tab2_multi_insert_worst"
         number, label, caption = PAPER_MAP[stem]
-        grids = {1: write_grid(agg, "reference", 1), 16: write_grid(agg, "reference", 16)}
-        fresh = write_grid(agg, "fresh", threads)
-        if threads == 16:
-            fresh_single = write_grid(agg, "fresh", 1)
-        else:
-            fresh_single = fresh
+        grids = {t: write_grid(agg, "reference", t) for t in (1, 16)}
+        fresh_grids = {t: write_grid(agg, "fresh", t) for t in (1, 16)}
         intro = (f"Slowest insert case per dataset/index ({note}): the value printed in the paper "
                  "and the value recomputed from the released CSVs")
         if has_results:
-            intro += (", and your result (`artifact/results/`) divided by the machine factor "
-                      f"{divisor:.2f}")
+            intro += (", and your measurement of that same case (`artifact/results/`, unscaled; "
+                      "`-` = you have not run it)")
         lines += ["", f"### {number} - {caption}", "", intro + ".", "",
                   "| dataset / index | paper (Mops) | released CSVs |"
-                  + (" your results |" if has_results else "") + " verdict |",
+                  + (" your result, same case |" if has_results else "") + " verdict (released vs paper) |",
                   "| --- | --- | --- |" + (" --- |" if has_results else "") + " --- |"]
         tallies = {"yes": 0, "no": 0, "absent": 0, "crash": 0, "timeout": 0}
         for position, dataset in enumerate(spec["dataset"]):
@@ -588,15 +582,18 @@ def paper_tables(agg: pd.DataFrame, datasets: list[str], factor: float | None) -
                 continue
             for index in spec["indexes"]:
                 printed = spec["printed"][index][position]
-                source_thread = 1 if (threads == 16 and index in single_thread_indexes) else threads
+                repeats_single = threads == 16 and index in single_thread_indexes
+                source_thread = 1 if repeats_single else threads
                 rows = grids[source_thread]
                 rows = rows[(rows["dataset"] == dataset) & (rows["index_type"] == index)]
-                recomputed = rows["throughput"].min() / 1e6 if not rows.empty else None
-                rerun_rows = (fresh_single if (threads == 16 and index in single_thread_indexes) else fresh)
-                rerun_rows = rerun_rows[(rerun_rows["dataset"] == dataset)
-                                        & (rerun_rows["index_type"] == index)]
-                rerun = rerun_rows["throughput"].min() / 1e6 / divisor if not rerun_rows.empty else None
-                repeats_single = threads == 16 and index in single_thread_indexes
+                recomputed = rerun = None
+                if not rows.empty:
+                    slowest = rows.loc[rows["throughput"].idxmin()]
+                    recomputed = slowest["throughput"] / 1e6
+                    mine = fresh_grids[source_thread]
+                    mine = mine[(mine["dataset"] == dataset) & (mine["index_type"] == index)
+                                & (mine["suite"] == slowest["suite"]) & (mine["bulkload_m"] == slowest["bulkload_m"])]
+                    rerun = float(mine["throughput"].iloc[0]) / 1e6 if not mine.empty else None
                 if printed is None:
                     verdict = "n/a - the paper prints CRASH"
                     tallies["crash"] += 1
@@ -604,18 +601,16 @@ def paper_tables(agg: pd.DataFrame, datasets: list[str], factor: float | None) -
                     verdict = ("timeout: printed value = keys inserted before the 30-minute "
                                "limit / elapsed time; a killed run writes no CSV record")
                     tallies["timeout"] += 1
-                elif recomputed is None and rerun is None:
+                elif recomputed is None:
                     verdict = "no measurement in the released CSVs to compare"
                     tallies["absent"] += 1
                 else:
-                    reference_value = recomputed if recomputed is not None else rerun
-                    delta = abs(reference_value - printed) / printed * 100
+                    delta = abs(recomputed - printed) / printed * 100
                     if delta <= 20:
-                        verdict = f"yes ({delta:.0f}%)" if recomputed is not None else f"yes ({delta:.0f}%, rerun)"
+                        verdict = f"yes ({delta:.0f}%)"
                         tallies["yes"] += 1
                     else:
-                        verdict = f"NO: released CSVs give {recomputed:.3g}" if recomputed is not None \
-                            else f"NO: rerun gives {rerun:.3g}"
+                        verdict = f"NO: released CSVs give {recomputed:.3g}"
                         tallies["no"] += 1
                     if repeats_single:
                         verdict += "; single-threaded case"
@@ -681,8 +676,10 @@ def render_summary(reference: list[dict], fresh: list[dict], selected_meta: dict
         lines += [f"* {c['claim']}: recomputed {c['measured']} vs printed {c['published']} {c['unit']}"
                   for c in mismatched]
     if fresh:
-        lines += ["", "## Your results vs the released measurements, same cases", "",
-                  "| Claim | Your results | Released, same cases | Unit | Within 20% |",
+        lines += ["", "## Your results vs the released measurements, same cases", ""]
+        if selected_meta.get("fresh_note"):
+            lines += [selected_meta["fresh_note"], ""]
+        lines += ["| Claim | Your results | Released, same cases | Unit | Within 20% |",
                   "| --- | --- | --- | --- | --- |"]
         for item in fresh:
             ok = {True: "yes", False: "NO", None: "n/a"}[item["within_tolerance"]]
@@ -690,9 +687,10 @@ def render_summary(reference: list[dict], fresh: list[dict], selected_meta: dict
                          f"{item['published']} | {item['unit']} | {ok} |")
         fresh_evaluated = [c for c in fresh if c["within_tolerance"] is not None]
         fresh_ok = sum(1 for c in fresh_evaluated if c["within_tolerance"] is True)
-        lines += ["", f"{fresh_ok}/{len(fresh_evaluated)} of your results match the released "
-                      "measurements within 20%."]
-    if selected_meta.get("fresh_note"):
+        lines += ["", f"{fresh_ok}/{len(fresh_evaluated)} of your results are within 20% of the released "
+                      "value of the same cases. A row outside it is worth a look in the figures, "
+                      "not a failed claim by itself: the claims are the trends of §1."]
+    elif selected_meta.get("fresh_note"):
         lines += ["", selected_meta["fresh_note"]]
     if paper_block:
         lines += paper_block
@@ -736,32 +734,30 @@ def main() -> None:
                 "they are reported but not compared against the paper."
             )
         else:
-            fresh_metrics, fresh_notes = compute_metrics(agg, "fresh", datasets)
-            subset_metrics, _ = compute_metrics(agg[agg["source"] == "reference"], "reference", datasets)
-            factor, pairs = machine_factor(agg, datasets)
-            fresh_verdicts = fresh_checks(fresh_metrics, subset_metrics, datasets, indexes, factor)
+            common = same_cases(agg)
+            fresh_metrics, _ = compute_metrics(common, "fresh", datasets)
+            released_metrics, _ = compute_metrics(common, "reference", datasets)
+            fresh_verdicts = fresh_checks(fresh_metrics, released_metrics)
+            factor, pairs = machine_factor(common)
+            cases = len(common[common["source"] == "fresh"][CASE_KEYS].drop_duplicates())
             selected_meta["machine_factor"] = None if factor is None else round(factor, 3)
             selected_meta["machine_factor_pairs"] = pairs
             fresh_note = (
-                f"AE re-measurement covers datasets {datasets} and indexes {indexes}; "
-                f"this machine reaches {factor:.2f}x the paper's throughput "
-                f"(median over {pairs} matched case/phase measurements), and the fresh "
-                "verdicts below are normalised by that factor before comparison."
-                if factor else
-                f"AE re-measurement covers datasets {datasets} and indexes {indexes}."
+                f"Both columns are computed over the same {cases} measured cases (datasets "
+                f"{', '.join(datasets)}; indexes {', '.join(indexes)}), so a row covers only the cases "
+                "you ran, not the paper's whole grid. The values are relative (shares, ratios, "
+                "space), so they are compared unscaled."
+                + (f" For context, your throughput is {factor:.2f}x the released one "
+                   f"(median over {pairs} throughput measurements of those cases)." if factor else "")
             )
     if fresh_note:
         selected_meta["fresh_note"] = fresh_note
-    if fresh_verdicts:
-        selected_meta["fresh_note"] = (selected_meta.get("fresh_note", "") +
-                                       " Relative claims (best vs worst case, learned vs traditional) are"
-                                       " what to read here: absolute Mops differ per machine.")
 
     paper_block: list[str] = []
     selected_meta["paper_map"] = {stem: {"number": number, "label": label, "caption": caption}
                                   for stem, (number, label, caption) in PAPER_MAP.items()}
     paper_block += paper_map_lines()
-    paper_block += paper_tables(agg, DATASETS, selected_meta.get("machine_factor"))
+    paper_block += paper_tables(agg, DATASETS)
     render_summary(checks, fresh_verdicts, selected_meta, HERE / "SUMMARY.md", HERE / "summary.json",
                    paper_block=paper_block)
 
@@ -775,7 +771,7 @@ def main() -> None:
     if fresh_verdicts:
         fresh_eval = [c for c in fresh_verdicts if c["within_tolerance"] is not None]
         fresh_ok = sum(1 for c in fresh_eval if c["within_tolerance"] is True)
-        print(f"AE rerun vs reference (same subset): {fresh_ok}/{len(fresh_eval)} within 20%")
+        print(f"your results vs released, same cases: {fresh_ok}/{len(fresh_eval)} within 20%")
     print(f"summary -> {HERE / 'SUMMARY.md'}")
 
 
