@@ -8,7 +8,7 @@
 
 | | command | time |
 | --- | --- | --- |
-| subset | `bash artifact/experiments/fig08_sensitivity/run.sh` | claims tier ~20 min; `--tier figures` adds the bulkload sweep on all four datasets, ~3.3 h |
+| subset | `bash artifact/experiments/fig08_sensitivity/run.sh` | claims tier ~20 min; `--tier figures` adds the Fig. 8a-c cases on all four datasets, ~5 h |
 | full grid | `bash artifact/experiments/fig08_sensitivity/run.sh --full` | test_ro_thp_single_thread, ~62 h |
 | released data only | `bash artifact/experiments/fig08_sensitivity/run.sh --plots-only` | ~1 min |
 

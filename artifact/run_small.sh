@@ -10,7 +10,7 @@
 # Usage:
 #   bash artifact/run_small.sh                     # claims tier (~4 h)
 #   bash artifact/run_small.sh --plots-only        # released data only: verdicts + figures (~1 min)
-#   bash artifact/run_small.sh --tier figures      # also the cases Fig. 5, 6, 8 draw (~6 h)
+#   bash artifact/run_small.sh --tier figures      # after the default: the cases Fig. 5, 6, 8 draw on all datasets (~11 h)
 #   bash artifact/run_small.sh --experiments "fig09_out_of_bound fig07_space"
 #   bash artifact/run_small.sh --datasets "linear covid"
 set -euo pipefail
