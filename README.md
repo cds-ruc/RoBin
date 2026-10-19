@@ -84,7 +84,7 @@ cd result
 (`artifact/experiments/<claim>/`).
 
 ```bash
-bash artifact/run_small.sh --plots-only   # the paper's figures and quoted numbers from its released measurements, ~1 min
+bash artifact/run_small.sh --plots-only   # the paper's figures, Tables 1-2 and headline numbers from its released measurements, ~1 min
 bash artifact/run_small.sh                # subset: key cases of the Section 4 and 6 claims, ~4 h
 bash artifact/experiments/fig10_15_root_cause/run.sh   # Section 5 root-cause profiling, ~2-3 h
 bash artifact/run_all.sh                  # full set: every grid of the paper, ~1 week

@@ -149,7 +149,8 @@ def complete_groups(frame: pd.DataFrame) -> pd.DataFrame:
 
     The overall figures pair every index's baseline <uniform, 100M, shuffled>
     with its <full, 200M> case by position, so a group missing either one would
-    shift the pairing of every later index.
+    shift the pairing of every later index.  Only those reference lines and
+    bands use this; every measured point is still drawn.
     """
     keep = []
     for _, group in frame.groupby(["key_path", "index_type"]):
@@ -164,8 +165,8 @@ def restrict_to_present(source: str, present: set[str]) -> str:
     """Results mode: plot only what was measured.
 
     * indexes without a measured row are dropped from the cell's ``index_types``;
-    * the overall figures keep only (dataset, index) groups holding both the
-      baseline and the full-build case they draw as reference lines;
+    * the overall figures draw every measured point; the baseline band and the
+      full-build line come only from (dataset, index) groups holding both;
     * Fig. 17 leaves out the bulkload fractions you have not measured (the
       notebook would draw them as 0%) and marks the measured ones.
 
@@ -188,15 +189,23 @@ def restrict_to_present(source: str, present: set[str]) -> str:
         'df_dataset = transformed_df[(transformed_df["key_path"] == dataset) & '
         'transformed_df["index_type"].isin(index_types)',
     )
-    # hard-coded CRASH annotations of the released DILI cases
+    # hard-coded annotations of released cases: DILI crashed on Covid, DyTIS
+    # timed out on Face; each is kept only while its index is in the figure
     if "dili" not in present:
-        source = re.sub(r"\n    # dili crash.*?(?=\n# Create legend)", "", source, flags=re.S)
-    frame = re.search(r"df_dataset = (\w+)\[\(?\1\[\"key_path\"\]", source)
-    if "read_optimal =" in source and frame:
-        name = frame.group(1)
-        source = (f"__ae_full = {name}\n{name} = __ae_complete({name})\ntry:\n"
-                  + "".join("    " + line + "\n" for line in source.splitlines())
-                  + f"finally:\n    {name} = __ae_full\n")
+        source = re.sub(r"\n    # dili crash.*?(?=\n\s*# dytis oom|\n# Create legend)", "", source, flags=re.S)
+    if "dytis" not in present:
+        source = re.sub(r"\n    # dytis oom.*?(?=\n# Create legend)", "", source, flags=re.S)
+    reference = re.search(r'\n(\s*)baseline = df_dataset\[.*?read_throughput_bounds = df_dataset\.groupby\("index_type"\)\[\s*"(\w+)"\s*\]\.agg\(\["min", "max"\]\)',
+                          source, flags=re.S)
+    if "read_optimal =" in source and reference:
+        pad, metric = reference.group(1), reference.group(2)
+        source = source[:reference.end()] + "".join(f"\n{pad}{line}" for line in (
+            "__ae_ref = __ae_complete(df_dataset)",
+            '__ae_base = (__ae_ref["test_suite"] == 22) & (__ae_ref["init_table_size"] == 100000000)',
+            "baseline = __ae_ref[__ae_base]",
+            "read_optimal = __ae_ref[__ae_ref[\"test_suite\"] == bulk_load_whole_data_suites]",
+            f'read_throughput_bounds = __ae_ref.groupby("index_type")["{metric}"].agg(["min", "max"])',
+        )) + source[reference.end():]
     if "1.5*btree_mean_read_throughput" in source:
         source = source.replace("ratios.append(0)", "ratios.append(float('nan'))")
         source = source.replace("label=get_official_name(key_path))", "label=get_official_name(key_path), marker='o')")
@@ -327,13 +336,9 @@ def _run_result_notebooks(mode: str, stage: Path, destination: Path, notebooks: 
             # comparison baseline when it is not listed first (outlier / augmentation)
             own = inputs if inputs[0] == "single_thread_thp.csv" else \
                 [csv_name for csv_name in inputs if csv_name != "single_thread_thp.csv"]
-            empty = []
             for csv_name in own:
-                measured = len(configurations(stage / csv_name))
-                measured_total += measured
+                measured_total += len(configurations(stage / csv_name))
                 released_total += len(configurations(REFERENCE / csv_name))
-                if measured == 0:
-                    empty.append(csv_name)
             for csv_name in inputs:
                 frame = pd.read_csv(stage / csv_name)
                 present |= set(frame["index_type"]) if "index_type" in frame else set()
@@ -341,9 +346,8 @@ def _run_result_notebooks(mode: str, stage: Path, destination: Path, notebooks: 
             stamp = (f"reproduced: {measured_total} of {released_total} configurations "
                      f"of the paper figure (artifact/results)")
             transform = (lambda source, present=present: restrict_to_present(source, present))
-            if empty:
-                # e.g. Fig. 17 needs single_thread_thp.alex_lipp_extended.csv, written by the full set only
-                lines.append(f"| `{name}` | {coverage} | - | not drawn yet: no measured case in {', '.join(empty)} |")
+            if measured_total == 0:
+                lines.append(f"| `{name}` | {coverage} | - | not run yet |")
                 continue
         errors = run_notebook(RESULT_NOTEBOOK_DIR / name, stage, transform, stamp, probe_datasets=mode == "results")
         produced = collect(stage / "fig", destination)

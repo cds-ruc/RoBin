@@ -443,7 +443,8 @@ def main() -> None:
                 ("bulkload_sweep_20m", "22", 20_000_000, "Finding 10/11: bulkload size sweep"),
                 ("insert_pattern", "21", BASELINE_BULK, "Finding 10: sorted vs shuffled insert"),
                 ("sampling_uniform", "22", BASELINE_BULK, "Finding 10: uniform sampling"),
-                ("sampling_segmented", "41", BASELINE_BULK, "Finding 10: segmented sampling"),
+                # paper 4.5: <uniform / segmented sampling, 100M, shuffled insert>
+                ("sampling_segmented", "42", BASELINE_BULK, "Finding 10: segmented sampling"),
             ):
                 add(
                     cases,
@@ -458,7 +459,7 @@ def main() -> None:
     for dataset in ("linear", "covid"):
         for role, suite, bulk in (
             ("insert_pattern", "21", BASELINE_BULK),
-            ("sampling_segmented", "41", BASELINE_BULK),
+            ("sampling_segmented", "42", BASELINE_BULK),
             ("bulkload_sweep_1m", "22", 1_000_000),
         ):
             add(

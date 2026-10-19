@@ -45,7 +45,7 @@ analyze_and_plot
 step "produced"
 cat <<EOF
   artifact/results/            every grid, under the paper's file names
-  artifact/SUMMARY.md          the paper's quoted numbers recomputed, and your results
+  artifact/SUMMARY.md          the paper's headline numbers and Tables 1-2 recomputed, and your results
   artifact/figures/paper/      the paper's figures from the released measurements
   artifact/figures/results/    the same figures from your results
 EOF

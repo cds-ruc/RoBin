@@ -4,7 +4,7 @@
 
 **What to look at.** The learned indexes' bands are much taller than the traditional ones'; many learned points lie below ART's baseline; the full-build line is not at the top of the learned bands. In Table 1, LIPP's cells are below B+tree's on every dataset, most DyTIS and DILI cells too.
 
-**How to check your runs.** On each dataset, the range of ALEX and LIPP across cases is much wider than that of B+tree and ART, at least one learned case is below ART's baseline, and LIPP's slowest insert is below B+tree's slowest.
+**How to check your runs.** The subset re-measures all four indexes on Linear: there, the range of ALEX and LIPP across cases is much wider than that of B+tree and ART, at least one learned case is below ART's baseline, and LIPP's slowest insert is below B+tree's slowest. On the other datasets it re-measures only some indexes (Covid: ALEX, LIPP; Face: B+tree, ART, ALEX; OSM: LIPP's full build), so their panels show only those; `--full` measures every dataset and index.
 
 | | command | time |
 | --- | --- | --- |

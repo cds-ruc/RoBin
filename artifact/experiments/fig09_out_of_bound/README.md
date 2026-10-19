@@ -1,6 +1,6 @@
 # Fig. 9 (Finding 12): ALEX with one outlier in the bulkload
 
-**Claim.** A single outlier in the bulkload lowers ALEX's lookup throughput in most cases, often by half or more.
+**Claim.** A single outlier in the bulkload lowers ALEX's lookup throughput in most cases (75%), and by half or more in about one in five (20%).
 
 **What to look at.** Most of the CDF lies left of 0, with a sizeable tail beyond -50%.
 

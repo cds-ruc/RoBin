@@ -9,11 +9,21 @@ source "$(dirname "${BASH_SOURCE[0]}")/../../lib/common.sh"
 cd "$ROOT"
 LOG_DIR="$RESULTS/profiling_log"
 
-if [ "${1:-}" != "--plots-only" ]; then
+PLOTS_ONLY=0
+case "${1:-}" in
+  "") ;;
+  --plots-only) PLOTS_ONLY=1 ;;
+  -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
+  *) echo "unknown option: $1" >&2; exit 1 ;;
+esac
+
+if [ "$PLOTS_ONLY" -eq 0 ]; then
   check_datasets
+  # set before the profiling build: build.sh removes build/ first, so a failed
+  # profiling build must still leave a release binary behind
+  trap 'step "build (release)"; bash build.sh release' EXIT
   step "build (profiling)"
   bash build.sh profiling
-  trap 'step "build (release)"; bash build.sh release' EXIT
   step "profiling cases (run_case_profiling.sh)"
   rm -rf "$LOG_DIR"; mkdir -p "$LOG_DIR"
   DATASET_DIR="$ROOT/datasets" LOG_DIR="$LOG_DIR" bash run_case_profiling.sh

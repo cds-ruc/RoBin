@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Fetch the four datasets of the paper into datasets/ and verify them.
+# Fetch the paper's datasets into datasets/ and verify them: five files of
+# 1,600,000,008 bytes (8.0 GB); the cases use linear, covid, fb-1 and osm.
 #
 #   covid, osm, fb   downloaded from the GRE host (datasets/download.sh)
 #   linear           generated: consecutive integers 1..200M

@@ -4,11 +4,11 @@
 
 **What to look at.** (a) the learned rows change strongly with bulkload size; (b) on Linear and Covid, ALEX's sorted bar well below its shuffled bar, LIPP's bars close; (c) LIPP's segmented bar well below uniform, ALEX's close.
 
-**How to check your runs.** ALEX is much faster with shuffled than with sorted insert; LIPP is much slower with segmented than with uniform sampling.
+**How to check your runs.** The subset measures ALEX and LIPP on Linear at `<uniform, 100M, shuffled>`, `<uniform, 100M, sorted>` and `<segmented, 100M, shuffled>`: ALEX is much faster with shuffled than with sorted insert; LIPP is much slower with segmented than with uniform sampling.
 
 | | command | time |
 | --- | --- | --- |
-| subset | `bash artifact/experiments/fig08_sensitivity/run.sh` | claims tier ~20 min; `--tier figures` adds the bulkload sweep on all four datasets, ~3.5 h |
+| subset | `bash artifact/experiments/fig08_sensitivity/run.sh` | claims tier ~20 min; `--tier figures` adds the bulkload sweep on all four datasets, ~3.3 h |
 | full grid | `bash artifact/experiments/fig08_sensitivity/run.sh --full` | test_ro_thp_single_thread, ~62 h |
 | released data only | `bash artifact/experiments/fig08_sensitivity/run.sh --plots-only` | ~1 min |
 
