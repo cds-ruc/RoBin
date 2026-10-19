@@ -8,7 +8,7 @@
 
 | | command | time |
 | --- | --- | --- |
-| subset | `bash artifact/experiments/fig05_06_tail_latency/run.sh` | claims tier ~50 min; `--tier figures` adds the cases the figures draw, ~2.5 h |
+| subset | `bash artifact/experiments/fig05_06_tail_latency/run.sh` | claims tier ~50 min; `--tier figures` adds the cases the figures draw, ~2.2 h |
 | full grid | `bash artifact/experiments/fig05_06_tail_latency/run.sh --full` | test_ro_lat_single_thread + test_ro_lat_multi_thread, ~37 h |
 | released data only | `bash artifact/experiments/fig05_06_tail_latency/run.sh --plots-only` | ~1 min |
 

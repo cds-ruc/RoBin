@@ -3,7 +3,10 @@
 
 ARTIFACT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT="$(cd "$ARTIFACT/.." && pwd)"
-RESULTS="$ARTIFACT/results"
+# ROBIN_RESULTS redirects the results directory, as in artifact/lib/layout.py;
+# made absolute and exported so the shell steps and the Python tools agree
+RESULTS="$(realpath -m "${ROBIN_RESULTS:-$ARTIFACT/results}")"
+export ROBIN_RESULTS="$RESULTS"
 export numanode="${numanode:-0}"
 
 # full-grid functions of reproduce.sh that each experiment needs

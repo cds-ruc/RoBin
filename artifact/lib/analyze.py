@@ -739,11 +739,15 @@ def main() -> None:
             released_metrics, _ = compute_metrics(common, "reference", datasets)
             fresh_verdicts = fresh_checks(fresh_metrics, released_metrics)
             factor, pairs = machine_factor(common)
-            cases = len(common[common["source"] == "fresh"][CASE_KEYS].drop_duplicates())
+            fresh_common = common[common["source"] == "fresh"]
+            configs = len(fresh_common[["dataset", "index_type", "suite", "bulkload_m", "thread_num", "tail_lat", "oob"]]
+                          .drop_duplicates())
+            measurements = len(fresh_common[CASE_KEYS].drop_duplicates())
             selected_meta["machine_factor"] = None if factor is None else round(factor, 3)
             selected_meta["machine_factor_pairs"] = pairs
             fresh_note = (
-                f"Both columns are computed over the same {cases} measured cases (datasets "
+                f"Both columns are computed over the same {configs} configurations ({measurements} lookup, "
+                f"insert, bulkload and space measurements; datasets "
                 f"{', '.join(datasets)}; indexes {', '.join(indexes)}), so a row covers only the cases "
                 "you ran, not the paper's whole grid. The values are relative (shares, ratios, "
                 "space), so they are compared unscaled."

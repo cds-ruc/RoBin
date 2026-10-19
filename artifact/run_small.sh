@@ -56,7 +56,7 @@ analyze_and_plot $EXPERIMENTS
 
 step "produced"
 cat <<EOF
-  artifact/SUMMARY.md          the paper's quoted numbers recomputed (and your results, once you have them)
+  artifact/SUMMARY.md          the paper's headline numbers and Tables 1-2 recomputed (and your results, once you have them)
   artifact/figures/paper/      the paper's figures from the released measurements
 EOF
 if [ "$PLOTS_ONLY" -eq 0 ]; then

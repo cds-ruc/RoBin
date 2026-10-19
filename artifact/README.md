@@ -40,7 +40,8 @@ pip install -r artifact/requirements.txt  # pandas, numpy, matplotlib, seaborn, 
 bash build.sh release                     # fetches the 15 index submodules, installs libtbb, libmkl,
                                           # libjemalloc, libboost with apt (run as root or preinstall
                                           # them), then builds ./build/microbench
-bash artifact/data/fetch.sh               # the four datasets, 8.0 GB, checksums verified
+bash artifact/data/fetch.sh               # the datasets (five files, 8.0 GB; the cases use linear, covid,
+                                          # fb-1, osm; fb only builds fb-1), checksums verified
 export numanode=0                         # NUMA node to bind to; needed when numactl is installed
 ```
 
@@ -56,7 +57,7 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 
 | command | what it reproduces | time | needs |
 | --- | --- | --- | --- |
-| `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and every number the text quotes, recomputed from the released measurements | ~1 min | setup steps 1-2 |
+| `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and the headline number of each finding, recomputed from the released measurements | ~1 min | setup steps 1-2 |
 | `bash artifact/run_small.sh` | subset: the key cases of every throughput, latency, space and mitigation claim (Fig. 3-9, 16, 17), at full scale, on your machine | ~4 h | setup steps 1-3, hardware below |
 | `bash artifact/experiments/fig10_15_root_cause/run.sh` | Section 5 root-cause figures (Fig. 10-15) from an instrumented build; not part of `run_small.sh` | ~2-3 h | setup steps 1-3, hardware below |
 | `bash artifact/run_small.sh --tier figures` | after the default subset: the cases Fig. 5, 6 and 8 need to be redrawn completely from your runs | ~6 h | setup steps 1-3, hardware below |
@@ -87,7 +88,8 @@ submodules are needed only to build, so step 3 fetches them; cloning with
   `run.py` moves the pinning onto the bound node so memory stays local.
 * `RuntimeWarning: invalid value encountered in scalar divide` from
   `analysis_preload.ipynb` in results mode: a CDF of Fig. 16 whose cases you
-  have not run (the subset has no ALEX uint64 case); that curve's label reads `nan`.
+  have not run (e.g. after `--datasets fb-1`, which has no ALEX uint64 case);
+  that curve's label reads `nan`.
 * `cell N: failed-case table skipped, *_fail_case.log not released` in
   `artifact/figures/paper/MANIFEST.md`: the paper's failed-case logs were not
   released, so those two notebook cells are skipped. The figures are
@@ -149,7 +151,7 @@ your runs.
 | Fig. 5, 6 | [`fig05_06_tail_latency`](experiments/fig05_06_tail_latency/) | the worst insert tail latency of learned indexes is far above the traditional indexes', more so with 16 threads |
 | Fig. 7 | [`fig07_space`](experiments/fig07_space/) | learned-index space varies widely; LIPP uses many times the data size; ALEX has an abnormal case on Face; SALI needs about twice LIPP's space |
 | Fig. 8a-c | [`fig08_sensitivity`](experiments/fig08_sensitivity/) | one changed variable moves learned indexes a lot: ALEX reacts to the insert pattern, LIPP to bulkload size and sampling |
-| Fig. 9 | [`fig09_out_of_bound`](experiments/fig09_out_of_bound/) | one outlier in the bulkload lowers ALEX's lookup in most cases, often by half or more |
+| Fig. 9 | [`fig09_out_of_bound`](experiments/fig09_out_of_bound/) | one outlier in the bulkload lowers ALEX's lookup in most cases (75%), and by half or more in about one in five (20%) |
 | Fig. 10-15 | [`fig10_15_root_cause`](experiments/fig10_15_root_cause/) | overfitted root models, unbalanced trees, SMOs that do not fix the models, gap- and metadata-dominated space |
 | Fig. 16 | [`fig16_data_augmentation`](experiments/fig16_data_augmentation/) | 1% augmented keys mostly help LIPP and can hurt ALEX |
 | Fig. 17 | [`fig17_reconstruction`](experiments/fig17_reconstruction/) | with most of the data bulkloaded, LIPP beats ART and B+tree everywhere; ALEX needs more and still fails on hard datasets |
@@ -219,7 +221,7 @@ one file per measurement grid, never one file per run.
 | `memory_consumption.csv` | space, derived from the two throughput files |
 | `single_thread_thp.alex_oob.csv` | ALEX with one outlier in the bulkload |
 | `single_thread_thp.alex_lipp_preload_1_100_{uint64,dataset}.csv` | bulkload with 1% augmented keys |
-| `single_thread_thp.alex_lipp_extended.csv` | extra bulkload sizes (full set only) |
+| `single_thread_thp.alex_lipp_extended.csv` | bulkload sizes outside the main grid (Fig. 17; the subset writes the 60% and 90% fractions) |
 | `*_fail_case.log` | run.py's `Failed command:` lines |
 | `status.json`, `logs/` | per-case status and stdout |
 
@@ -228,11 +230,12 @@ of the same case on `--force`. The full set writes whole files. Both use the
 same names, so the full set supersedes the subset.
 
 **`artifact/SUMMARY.md`** is written by every entry point. It recomputes from
-the released measurements each number the paper's text quotes, plus Tables 1
-and 2, and compares them with the printed values. This checks the scripts; it
-is not a measurement of your machine. Once `artifact/results/` holds your
-runs, it adds a table that compares them with the released measurements of
-the same cases.
+the released measurements the headline number of each finding (31 rows) plus
+Tables 1 and 2, and compares them with the printed values; per-dataset
+breakdowns and the Section 5 statistics, which need the full profiling logs,
+are not recomputed. This checks the scripts; it is not a measurement of your
+machine. Once `artifact/results/` holds your runs, it adds a table that
+compares them with the released measurements of the same cases.
 
 ## 3. Running
 
@@ -242,7 +245,8 @@ Concurrent cases slow each other down by different amounts, so there is no
 parallel mode.
 
 `artifact/lib/gen_cases.py` derives the cases from the released
-measurements, so no case is hand-picked. For every (dataset, index) it takes:
+measurements. The `core` and `extended` tiers take, for every (dataset,
+index):
 - the baseline `<uniform, 100M, shuffled>`;
 - the full build `<full, 200M>`;
 - the argmin and argmax of the metric each figure plots: lookup throughput,
@@ -256,7 +260,10 @@ outlier pairs, the largest augmentation gain and loss, and for Section 6:
   the 90% bulkload fraction and ALEX at 60% and 100%, the fractions the text
   names, plus the B+tree and ART cases its thresholds average over.
 
-A configuration two experiments need is one case.
+The default `claims` tier is a fixed slice of those (`claims_selection` in
+`gen_cases.py`): per claim, a few (dataset, index) pairs, mostly all four
+indexes on Linear plus the datasets the extreme cases come from, not every
+pair. A configuration two experiments need is one case.
 
 | experiment | default (`claims`) | `--tier figures` adds | `--full` runs (reproduce.sh) |
 | --- | --- | --- | --- |
@@ -264,8 +271,8 @@ A configuration two experiments need is one case.
 | `fig04_tab2_multi_thread` | 14 runs, ~5 min | - | `test_ro_thp_multi_thread`, 13 h |
 | `fig05_06_tail_latency` | 10 runs, ~50 min | 90 runs, ~2.2 h | `test_ro_lat_{single,multi}_thread`, 37 h |
 | `fig07_space` | 5 runs, ~10 min | - | both throughput grids, 75 h |
-| `fig08_sensitivity` | 19 runs, ~20 min | 73 runs, ~3.3 h | `test_ro_thp_single_thread`, 62 h |
-| `fig09_out_of_bound` | 9 runs, ~25 min | 3 runs | + `test_ro_thp_single_thread_extended_oob`, 4 h |
+| `fig08_sensitivity` | 18 runs, ~20 min | 71 runs, ~3.3 h | `test_ro_thp_single_thread`, 62 h |
+| `fig09_out_of_bound` | 9 runs, ~25 min | 2 runs | + `test_ro_thp_single_thread_extended_oob`, 4 h |
 | `fig10_15_root_cause` | not in `run_small.sh`: run its `run.sh`, ~2-3 h | - | same |
 | `fig16_data_augmentation` | 9 runs, ~25 min | - | + `test_ro_thp_single_thread_data_augmentation`, 25 h |
 | `fig17_reconstruction` | 14 runs, ~25 min | - | + `test_ro_thp_single_thread_extended_bulksize`, 9 h |
@@ -327,12 +334,13 @@ An experiment's `run.sh` writes `MANIFEST.<experiment>.md` instead.
 | Fig. 17 | `alex_lipp_read_throughput_better_than_trad.pdf` | `results/analysis_bulkload_variance.ipynb` |
 | Tables 1, 2 | `artifact/SUMMARY.md` | `artifact/lib/analyze.py` |
 
-In results mode, a figure is drawn as soon as your results hold the cases it
-plots:
-- Fig. 3, 4, 7, 8b, 9, 16 and 17 after the default subset (Fig. 16 and 17
-  over the subset's few cases; Fig. 17 marks the bulkload fractions you
-  measured and leaves the others out);
-- Fig. 5, 6, 8a and 8c after `--tier figures`.
+In results mode, a figure is drawn from whatever cases your results hold:
+every measured point is plotted, and a panel appears for each dataset with
+measured cases (the stamp on each PDF and `MANIFEST.md` list them).
+- After the default subset: Fig. 3, 4, 7, 9, 16 and 17 on the subset's cases,
+  Fig. 8b and 8c on Linear, Fig. 5 and 6 on Covid only (Fig. 17 marks the
+  bulkload fractions you measured and leaves the others out);
+- after `--tier figures`: Fig. 5, 6 and 8a-c on all four datasets.
 
 ## 5. Root-cause profiling (Fig. 10-15)
 
