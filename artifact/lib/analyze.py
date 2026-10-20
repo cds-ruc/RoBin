@@ -189,6 +189,13 @@ SPECS = [
     ("single_thread_thp.alex_lipp_extended.csv", 1, False, False, "extended"),
     ("single_thread_thp.alex_oob.csv", 1, False, True, "oob"),
 ]
+# tables of analyze.py each result file of run_cases.py feeds (the throughput
+# files also feed the space table, through memory_consumption.csv)
+TABLES_OF = {
+    "single_thread_thp.csv": ("thp", "space"), "multi_thread_thp.csv": ("thp", "space"),
+    "single_thread_tail_lat.csv": ("tail",), "multi_thread_tail_lat.csv": ("tail",),
+    "single_thread_thp.alex_oob.csv": ("oob",), "single_thread_thp.alex_lipp_extended.csv": ("extended",),
+}
 
 
 def load_frames(include_reference: bool, include_fresh: bool) -> pd.DataFrame:
@@ -546,9 +553,65 @@ def fresh_checks(metrics_fresh: dict, metrics_released: dict) -> list[dict]:
         measured, expected = metrics_fresh.get(key), metrics_released.get(key)
         if measured is None or expected is None or measured != measured or expected != expected:
             continue
-        check = make_check(f"[fresh] {claim}", measured, round(float(expected), 4), abs(float(expected)) * 0.2, unit)
+        check = make_check(f"[fresh] {claim}", measured, round(float(expected), 4), abs(float(expected)) * 0.2, unit,
+                           notes=FRESH_NOTES.get(key, ""))
+        check["key"] = key
         checks.append(check)
     return checks
+
+
+# rows of the fresh table whose subset is chosen, not sampled
+FRESH_NOTES = {
+    "oob_share_slower": "the subset runs the worst released outlier pairs, so this share is far above the "
+                        "paper's grid-wide 75%; compare it with the released value of the same cases",
+    "oob_share_halved": "the subset runs the worst released outlier pairs, so this share is far above the "
+                        "paper's grid-wide 20%; compare it with the released value of the same cases",
+}
+
+
+def attempted_reference(agg: pd.DataFrame) -> pd.DataFrame | None:
+    """Released rows of every case recorded in artifact/results/status.json, whatever its status."""
+    status_path, cases_path = RESULTS / "status.json", HERE / "cases.json"
+    if not status_path.exists() or not cases_path.exists():
+        return None
+    status = json.loads(status_path.read_text())
+    by_id = {case["run_id"]: case for case in json.loads(cases_path.read_text())["cases"]}
+    keys = set()
+    for run_id in status:
+        case = by_id.get(run_id)
+        if case is None:
+            continue
+        for table in TABLES_OF.get(case["result_file"], ()):
+            keys.add((case["dataset"], case["index"], str(case["suite"]), round(int(case["bulkload_size"]) / 1e6, 6),
+                      int(case["concurrency"]), bool(case["tail_lat"]), table, bool(case["out_of_bound"])))
+    if not keys:
+        return None
+    columns = ["dataset", "index_type", "suite", "bulkload_m", "thread_num", "tail_lat", "table", "oob"]
+    return agg[agg["source"] == "reference"].merge(pd.DataFrame(sorted(keys), columns=columns), on=columns)
+
+
+def missing_checks(agg: pd.DataFrame, fresh: list[dict]) -> list[dict]:
+    """Claims the released data of your attempted cases supports, but your results do not.
+
+    A failed, timed-out or empty run leaves its case out of "same cases"; the
+    claims resting on it would otherwise disappear from the table unnoticed.
+    """
+    attempted = attempted_reference(agg)
+    if attempted is None or attempted.empty:
+        return []
+    datasets = [d for d in DATASETS if d in set(attempted["dataset"])]
+    expected, _ = compute_metrics(attempted, "reference", datasets)
+    have = {check["key"] for check in fresh}
+    missing = []
+    for key, (claim, _published, _tol, unit) in PAPER.items():
+        value = expected.get(key)
+        if key in have or value is None or value != value:
+            continue
+        missing.append({"claim": f"[fresh] {claim}", "key": key, "measured": None, "published": round(float(value), 4),
+                        "tolerance": None, "unit": unit, "within_tolerance": None, "missing": True,
+                        "notes": "its cases ran but gave no result (failed, timed out or empty): "
+                                 "see artifact/results/status.json"})
+    return missing
 
 
 def paper_tables(agg: pd.DataFrame, datasets: list[str]) -> list[str]:
@@ -679,17 +742,25 @@ def render_summary(reference: list[dict], fresh: list[dict], selected_meta: dict
         lines += ["", "## Your results vs the released measurements, same cases", ""]
         if selected_meta.get("fresh_note"):
             lines += [selected_meta["fresh_note"], ""]
-        lines += ["| Claim | Your results | Released, same cases | Unit | Within 20% |",
-                  "| --- | --- | --- | --- | --- |"]
+        lines += ["| Claim | Your results | Released, same cases | Unit | Within 20% | Notes |",
+                  "| --- | --- | --- | --- | --- | --- |"]
         for item in fresh:
-            ok = {True: "yes", False: "NO", None: "n/a"}[item["within_tolerance"]]
-            lines.append(f"| {item['claim'].replace('[fresh] ', '')} | {item['measured']} | "
-                         f"{item['published']} | {item['unit']} | {ok} |")
+            if item.get("missing"):
+                measured, ok = "-", "**missing**"
+            else:
+                measured, ok = item["measured"], {True: "yes", False: "NO", None: "n/a"}[item["within_tolerance"]]
+            lines.append(f"| {item['claim'].replace('[fresh] ', '')} | {measured} | "
+                         f"{item['published']} | {item['unit']} | {ok} | {item.get('notes', '')} |")
         fresh_evaluated = [c for c in fresh if c["within_tolerance"] is not None]
         fresh_ok = sum(1 for c in fresh_evaluated if c["within_tolerance"] is True)
+        missing = [c for c in fresh if c.get("missing")]
         lines += ["", f"{fresh_ok}/{len(fresh_evaluated)} of your results are within 20% of the released "
                       "value of the same cases. A row outside it is worth a look in the figures, "
                       "not a failed claim by itself: the claims are the trends of §1."]
+        if missing:
+            lines += ["", f"{len(missing)} claims have no result although their cases ran (failed, timed out "
+                          "or empty output); rerun those cases (`artifact/results/status.json`, `--force`) "
+                          "before judging them."]
     elif selected_meta.get("fresh_note"):
         lines += ["", selected_meta["fresh_note"]]
     if paper_block:
@@ -723,6 +794,7 @@ def main() -> None:
     fresh_rows = agg[agg["source"] == "fresh"]
     fresh_verdicts: list[dict] = []
     fresh_note = None
+    full_scale = True
     if not fresh_rows.empty:
         full_scale = float(fresh_rows["table_size"].max()) >= FULL_SIZE
         datasets = [d for d in DATASETS if d in set(fresh_rows["dataset"])]
@@ -754,6 +826,8 @@ def main() -> None:
                 + (f" For context, your throughput is {factor:.2f}x the released one "
                    f"(median over {pairs} throughput measurements of those cases)." if factor else "")
             )
+    if full_scale and not args.reference_only:
+        fresh_verdicts += missing_checks(agg, fresh_verdicts)
     if fresh_note:
         selected_meta["fresh_note"] = fresh_note
 
@@ -775,7 +849,11 @@ def main() -> None:
     if fresh_verdicts:
         fresh_eval = [c for c in fresh_verdicts if c["within_tolerance"] is not None]
         fresh_ok = sum(1 for c in fresh_eval if c["within_tolerance"] is True)
-        print(f"your results vs released, same cases: {fresh_ok}/{len(fresh_eval)} within 20%")
+        missing = [c for c in fresh_verdicts if c.get("missing")]
+        print(f"your results vs released, same cases: {fresh_ok}/{len(fresh_eval)} within 20%"
+              + (f"; {len(missing)} claims MISSING (their cases ran without a result)" if missing else ""))
+        for item in missing:
+            print(f"  MISSING: {item['claim'].replace('[fresh] ', '')}")
     print(f"summary -> {HERE / 'SUMMARY.md'}")
 
 

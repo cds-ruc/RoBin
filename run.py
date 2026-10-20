@@ -15,28 +15,54 @@ def parse_cpus(spec):
     return cpus
 
 
-def cpus_on_node(requested, node):
-    """Keep a --taskset request on the NUMA node numactl binds memory to.
+SYSFS = "/sys/devices/system"
 
-    --taskset=1-N means "N CPUs, starting from CPU 1" (CPU 0 is left to the OS).
-    On machines that number CPUs round-robin across sockets (node 0 = 0,2,4,...),
-    CPU 1 sits on node 1 while numactl --membind keeps memory on node 0, so every
-    access would be remote.  Such a request is mapped to the same number of
-    CPUs of the bound node, again skipping its first CPU.
+
+def physical_cores(cpus):
+    """One logical CPU per physical core, in the order of ``cpus``.
+
+    A core's SMT siblings share ``topology/thread_siblings_list``; only the
+    first sibling met is kept.  Without topology files every CPU is its own core.
     """
-    path = f"/sys/devices/system/node/node{node}/cpulist"
+    seen, picked = set(), []
+    for cpu in cpus:
+        path = f"{SYSFS}/cpu/cpu{cpu}/topology/thread_siblings_list"
+        core = tuple(parse_cpus(open(path).read().strip())) if os.path.exists(path) else (cpu,)
+        if core not in seen:
+            seen.add(core)
+            picked.append(cpu)
+    return picked
+
+
+def pin_cpus(requested, node):
+    """CPUs for a --taskset=1-N request: N physical cores, not SMT siblings.
+
+    --taskset=1-N means "N CPUs, skipping the first one" (left to the OS).  The
+    CPUs are taken from the NUMA node numactl binds memory to (``node``; all
+    online CPUs without numactl), one logical CPU per physical core, so that a
+    16-thread case gets 16 cores whatever the machine's CPU numbering:
+    alternating across sockets (node 0 = 0,2,4,...) or SMT siblings numbered
+    next to each other (0,1 = one core).
+    """
+    wanted = parse_cpus(requested)
+    path = f"{SYSFS}/node/node{node}/cpulist" if node is not None else f"{SYSFS}/cpu/online"
     if not os.path.exists(path):
         return requested
-    wanted = parse_cpus(requested)
     local = parse_cpus(open(path).read().strip())
-    if set(wanted) <= set(local):
+    where = f"numa node {node}" if node is not None else "this machine"
+    for pool, kind in ((physical_cores(local), "physical cores"), (local, "logical CPUs")):
+        pool = pool[1:] if len(pool) > len(wanted) else pool
+        if len(pool) >= len(wanted):
+            break
+    else:
+        print(f"warning: {where} has {len(local)} CPUs, fewer than --taskset={requested} asks for")
         return requested
-    pool = local[1:] if len(local) > len(wanted) else local
-    if len(pool) < len(wanted):
-        print(f"warning: node {node} has {len(local)} CPUs, fewer than --taskset={requested} asks for")
-        return requested
+    if kind == "logical CPUs":
+        print(f"warning: {where} has fewer than {len(wanted)} physical cores; SMT siblings are used")
     mapped = ",".join(str(cpu) for cpu in pool[: len(wanted)])
-    print(f"taskset {requested} -> {mapped}: CPUs of numa node {node}, where memory is bound")
+    if parse_cpus(mapped) != wanted:
+        print(f"taskset {requested} -> {mapped}: {kind} of {where}"
+              + (", where memory is bound" if node is not None else ""))
     return mapped
 
 
@@ -194,8 +220,7 @@ def main():
     if args.taskset is None:
         args.taskset = ""
     else:
-        if numactl_arg:
-            args.taskset = cpus_on_node(args.taskset, numanode)
+        args.taskset = pin_cpus(args.taskset, numanode if numactl_arg else None)
         args.taskset = "taskset -c " + args.taskset
     
     # keys_path2_arg=""

@@ -22,9 +22,11 @@ command after the clone runs from the repository root.
 no claim. §1 maps every key result to its experiment directory.
 
 **Software.** Linux x86-64 (developed on Ubuntu 22.04), `git`, `bash`,
-Python ≥ 3.11 with `pip`. To build and run cases also: CMake ≥ 3.14, a C++17
-compiler (GCC 11 used), `apt` for the libraries `build.sh` installs, `wget`
-and `sha256sum` for the datasets, and optionally `numactl`.
+Python ≥ 3.11 with `pip`. To build and run cases also: CMake ≥ 3.14, GCC ≥
+11.4.0 as `/usr/bin/gcc` and `/usr/bin/g++` (`CMakeLists.txt` uses those paths
+and stops on an older GCC; the paper used 11.4.0), `apt` for the libraries
+`build.sh` installs, `wget` and `sha256sum` for the datasets, and optionally
+`numactl`.
 
 **Setup.**
 
@@ -66,12 +68,14 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 | `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | setup steps 1-3, hardware below |
 
 **Hardware.**
-* Minimum: Linux x86-64, ≥ 17 logical CPUs on the NUMA node the runs bind to
-  (16-thread cases use 16 of them, CPU 0 of the node is left free), ≥ 48 GB RAM
-  on that node for the default, `figures` and `core` tiers (their largest case
-  is ALEX at ~37 GB), ~9 GB disk.
+* Minimum: Linux x86-64, ≥ 17 physical cores on the NUMA node the runs bind to
+  (16-thread cases use 16 of them, the node's first core is left free), ≥ 48 GB
+  RAM on that node for the default, `figures` and `core` tiers (their largest
+  case is ALEX at ~37 GB), ~9 GB disk for the subset; ~25 GB for Section 5 and
+  the full set, whose profiling logs take ~16 GB.
 * Recommended: ≥ 64 GB RAM, needed for `--tier extended` and the full set
-  (both include SALI at ~55 GB), 2 NUMA nodes with `numactl`.
+  (both include SALI at ~55 GB), 2 NUMA nodes with `numactl`, SMT
+  (hyper-threading) off as in the paper.
 
 **CPU and NUMA binding.** The scripts pin every case themselves; do not wrap
 them in `taskset` or `numactl`.
@@ -79,20 +83,37 @@ them in `taskset` or `numactl`.
   N-thread case (N = 1 or 16).
 * With `numactl` installed, `run.py` starts microbench under
   `numactl --cpunodebind=$numanode --membind=$numanode taskset -c <cpus>`.
-  If the requested CPUs are not on that node, it maps them onto N CPUs of the
-  node, skipping the node's first CPU, and prints `taskset 1-N -> <cpus>`.
-* Without `numactl`, run.py pins with `taskset -c 1-N` only and binds no memory.
+  The CPUs are taken from that node, one logical CPU per physical core (SMT
+  siblings are never paired), skipping the node's first core; when they
+  differ from the request, run.py prints `taskset 1-N -> <cpus>`.
+* Without `numactl`, run.py pins to N physical cores of the machine and binds
+  no memory.
+* A node with fewer than N + 1 physical cores falls back to SMT siblings and
+  prints a `warning:`; the 16-thread numbers then differ from the paper's.
 
-The 16-threaded cases (Fig. 4, 6, Table 2) therefore run on **one NUMA node**:
-all 16 threads and all memory on the same socket. The study measures how
-much each index fluctuates across workloads, so cross-socket memory traffic,
-which would add its own variance, is kept out. These runs do not measure
-multi-socket scaling.
+The 16-threaded cases (Fig. 4, 6, Table 2) therefore run on **one NUMA node**,
+on 16 physical cores: all threads and all memory on the same socket. The study
+measures how much each index fluctuates across workloads, so cross-socket
+memory traffic and SMT sharing, which would add their own variance, are kept
+out. These runs do not measure multi-socket scaling.
+
+**Repetitions.** The paper averages repeated runs of each case (Section 3).
+The subset runs each case once by default; `--repeat N` (`run_small.sh` and
+every experiment `run.sh`) runs it N times and records the mean of the N runs,
+at N times the cost. One run per case is enough for the trends: repeated runs
+of the same case usually agree within a few percent, a few differ by more, and
+averaging N runs narrows that.
 
 **What success looks like.**
 * `run_small.sh --plots-only` prints
   `reference claims: 31/31 within tolerance (2 informational), 0 mismatch`
   and ends with `=== produced ===`.
+* `run_small.sh` (default subset) prints the same line, then
+  `your results vs released, same cases: k/m within 20%`. That table is
+  advisory: it compares single runs on another machine, and some rows (e.g.
+  latency tails, which a single slow phase dominates) move by more than 20%;
+  judge a claim by its trend (§1). A
+  `MISSING` line means a claim's cases ran but gave no result; rerun them.
 * Each case prints `[n/N] <case> (~eta, ~eta left)`, then
   `ok -> <result file> (+k records)`.
 * `artifact/results/status.json` marks each case `ok`, apart from the
@@ -101,9 +122,9 @@ multi-socket scaling.
 **Benign messages.**
 * `binding with numa node: 0`, and compiler warnings from the index
   submodules during `build.sh`.
-* `taskset 1-1 -> 2: CPUs of numa node 0, where memory is bound`: on machines
-  that number CPUs alternately across sockets (node 0 = CPUs 0, 2, 4, ...),
-  `run.py` moves the pinning onto the bound node so memory stays local.
+* `taskset 1-1 -> 2: physical cores of numa node 0, where memory is bound`:
+  `run.py` moved the pinning onto one CPU per physical core of the bound node
+  (see "CPU and NUMA binding").
 * `RuntimeWarning: invalid value encountered in scalar divide` from
   `analysis_preload.ipynb` in results mode: a CDF of Fig. 16 whose cases you
   have not run (e.g. after `--datasets fb-1`, which has no ALEX uint64 case);
@@ -129,15 +150,21 @@ multi-socket scaling.
 
 **Disk.** The datasets are raw uint64 binaries, 1,600,000,008 bytes each, with
 no decompression step: `covid`, `osm` and `fb` are downloaded, `linear` and
-`fb-1` are generated. 8.0 GB in total, plus 45 MB for the build.
+`fb-1` are generated. 8.0 GB in total, plus 45 MB for the build and a few MB
+of results. Section 5 (`fig10_15_root_cause`, and `run_all.sh`) adds ~16 GB of
+profiling logs in `artifact/results/profiling_log/`.
 
 **Resuming.** Every step can be rerun:
-* `artifact/data/fetch.sh` keeps existing dataset files.
+* `artifact/data/fetch.sh` keeps complete dataset files, resumes an
+  interrupted download, and deletes and fetches again a file whose checksum
+  does not match.
 * The subset runner skips every case recorded in
-  `artifact/results/status.json`.
-* `run_all.sh` marks each finished grid in `artifact/results/.full/`.
+  `artifact/results/status.json`, so it resumes at the interrupted case.
+* `run_all.sh` marks each finished grid in `artifact/results/.full/`; an
+  interrupted grid runs again from its start.
+* `fig10_15_root_cause/run.sh` always runs its ten cases from the start.
 
-An interrupted run continues where it stopped; `--force` runs again.
+`--force` runs finished cases again.
 
 **What depends on the hardware.** Absolute throughput and latency depend on
 the hardware. Relative statements must hold on any machine, and those are
@@ -252,7 +279,8 @@ The subset runner appends each case to its file and replaces earlier records
 of the same case on `--force`. The full set writes whole files. Both use the
 same names, so the full set supersedes the subset.
 
-**`artifact/SUMMARY.md`** is written by every entry point. It recomputes from
+**`artifact/SUMMARY.md`** is written by every entry point except
+`fig10_15_root_cause/run.sh` (profiling only). It recomputes from
 the released measurements the headline number of each finding (31 rows) plus
 Tables 1 and 2, and compares them with the printed values; per-dataset
 breakdowns and the Section 5 statistics, which need the full profiling logs,
@@ -263,7 +291,7 @@ compares them with the released measurements of the same cases.
 ## 3. Running
 
 **Subset.** `run_small.sh` runs the cases one at a time, each pinned to one
-CPU (16 CPUs for 16-thread cases) of the NUMA node its memory is bound to
+physical core (16 for 16-thread cases) of the NUMA node its memory is bound to
 (see "CPU and NUMA binding" above). Concurrent cases slow each other down by
 different amounts, so there is no parallel mode.
 
@@ -314,6 +342,7 @@ and bulkloading come on top. Experiments share grids: e.g.
   * `core`: every extreme of B+tree, ART, ALEX, LIPP and their OLC variants;
   * `extended`: only the DyTIS, DILI, FINEdex and SALI extremes.
 * `--experiments "..."` and `--datasets "..."` restrict the selection.
+* `--repeat N` runs each case N times and records the mean (see "Repetitions").
 * `--force` reruns finished cases.
 * `--plots-only` runs nothing.
 

@@ -2,7 +2,7 @@
 
 | figure | claim | what to look at |
 | --- | --- | --- |
-| Fig. 10-11 | The root models overfit the bulkload: LIPP's root (Covid `<segmented, 2M, sorted>`) and ALEX's root (Face `<uniform, 100M, shuffled>`, skewed by its outliers near `UINT64_MAX`) put most keys into very few slots, and insertions do not correct them. | key mass concentrated in a few root slots, before and after insertions |
+| Fig. 10-11 | The root models overfit the bulkload: LIPP's root (Covid `<segmented, 2M, sorted>`) and ALEX's root (Face `<uniform, 100M, shuffled>`, skewed by its outliers near `UINT64_MAX`) map the keys badly, and insertions do not correct them. | LIPP: the bulkload keys spread evenly over the root slots, but after insertion nearly all keys sit in the rightmost slot; ALEX: key mass concentrated in a few root slots, before and after insertions |
 | Fig. 12 | In the best cases, skewed data sits in a few deep sub-trees and most data stays shallow; in the worst cases (OSM) data spreads over many levels. | the worst-case tree-height distribution spreads over more levels than the best case's |
 | Fig. 13 | With the same tree height, ALEX under sorted insert is slower than under shuffled insert, needs many more comparisons, and performs far more SMOs without fixing its models (Covid). | sorted vs shuffled: similar height, more comparisons, far more SMOs |
 | Fig. 14-15 | LIPP's space is dominated by empty gaps and SALI adds latch metadata on top; ALEX's Face blow-up is node metadata of a huge number of empty leaves at the low end of the key space. | gap segment dominates the LIPP bar; empty ALEX nodes concentrated at the smallest keys |

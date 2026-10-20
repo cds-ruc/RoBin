@@ -7,7 +7,8 @@ worst lookup case, and the worst insert case.  Those are the feature points the
 paper's findings are read off from; the remaining grid points only widen the
 strip the reference figures draw.
 
-One case is one configuration, run once.  A configuration several experiments
+One case is one configuration, run once (``run_cases.py --repeat N``: N times,
+recording the mean).  A configuration several experiments
 need (e.g. a baseline that is also a sensitivity reference) appears once, with
 all of them in its ``experiments`` list.
 
