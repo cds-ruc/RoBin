@@ -13,6 +13,7 @@
 #   bash artifact/run_small.sh --tier figures      # after the default: the cases Fig. 5, 6, 8 draw on all datasets (~11 h)
 #   bash artifact/run_small.sh --experiments "fig09_out_of_bound fig07_space"
 #   bash artifact/run_small.sh --datasets "linear covid"
+#   bash artifact/run_small.sh --repeat 3          # each case 3 times, records are the mean (3x the time)
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 cd "$ROOT"
@@ -22,6 +23,7 @@ EXPERIMENTS=""
 DATASETS=""
 PLOTS_ONLY=0
 FORCE=0
+REPEAT=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --tier) need_value "$@"; TIER="$2"; shift 2 ;;
@@ -29,7 +31,8 @@ while [ $# -gt 0 ]; do
     --datasets) need_value "$@"; DATASETS="$2"; shift 2 ;;
     --plots-only) PLOTS_ONLY=1; shift ;;
     --force) FORCE=1; shift ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    --repeat) need_value "$@"; REPEAT="$2"; shift 2 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -48,6 +51,7 @@ if [ "$PLOTS_ONLY" -eq 0 ]; then
   # shellcheck disable=SC2206
   [ -n "$DATASETS" ] && args+=(--datasets $DATASETS)
   [ "$FORCE" -eq 1 ] && args+=(--force)
+  args+=(--repeat "$REPEAT")
   python3 "$ARTIFACT/lib/run_cases.py" "${args[@]}"
 fi
 

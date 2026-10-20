@@ -3,7 +3,7 @@
 #   bash artifact/experiments/fig05_06_tail_latency/run.sh               # subset: the key cases (claims tier ~50 min; `--tier figures` adds the reference cases the figures draw, ~6.5 h)
 #   bash artifact/experiments/fig05_06_tail_latency/run.sh --full        # full grid of the paper (test_ro_lat_single_thread + test_ro_lat_multi_thread, ~37 h)
 #   bash artifact/experiments/fig05_06_tail_latency/run.sh --plots-only  # figures + verdicts from the released data only
-# Options: --tier claims|figures|core|extended, --datasets "...", --force. See README.md.
+# Options: --tier claims|figures|core|extended, --datasets "...", --repeat N, --force. See README.md.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/common.sh"
 experiment_main fig05_06_tail_latency "$@"

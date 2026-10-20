@@ -116,12 +116,13 @@ experiment_main() {
       --force) FORCE=1; pass+=(--force); shift ;;
       --plots-only) plots_only=1; shift ;;
       --tier) need_value "$@"; pass+=(--tier "$2"); shift 2 ;;
+      --repeat) need_value "$@"; pass+=(--repeat "$2"); shift 2 ;;
       --datasets|--indexes)
         need_value "$@"
         # shellcheck disable=SC2206
         local values=($2); pass+=("$1" "${values[@]}"); shift 2 ;;
       -h|--help)
-        echo "usage: $0 [--full] [--tier claims|figures|core|extended] [--datasets \"...\"] [--force] [--plots-only]"
+        echo "usage: $0 [--full] [--tier claims|figures|core|extended] [--datasets \"...\"] [--repeat N] [--force] [--plots-only]"
         return 0 ;;
       *) echo "unknown option: $1" >&2; return 1 ;;
     esac

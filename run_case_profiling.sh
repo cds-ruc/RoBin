@@ -15,7 +15,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -47,7 +47,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -74,7 +74,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -105,7 +105,7 @@ function AlexCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -139,7 +139,7 @@ function LippCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -170,7 +170,7 @@ function LippCaseTest {
             for ((i=1; i<=batch; i++))
             do
                 ./build/microbench \
-                --keys_file=$DATASET_DIR/$dataset \
+                --keys_file="$DATASET_DIR/$dataset" \
                 --keys_file_type=binary \
                 --read=0.0 --insert=0.0 \
                 --update=0.0 --scan=0.0  --delete=0.0 \
@@ -196,7 +196,7 @@ function LippCaseTest {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \
@@ -229,7 +229,7 @@ function MemoryBreakdown {
             for ((i=1; i<=batch; i++))
             do
                 ./build/microbench \
-                --keys_file=$DATASET_DIR/$dataset \
+                --keys_file="$DATASET_DIR/$dataset" \
                 --keys_file_type=binary \
                 --read=0.0 --insert=0.0 \
                 --update=0.0 --scan=0.0  --delete=0.0 \
@@ -255,7 +255,7 @@ function MemoryBreakdown {
                 for ((i=1; i<=batch; i++))
                 do
                     ./build/microbench \
-                    --keys_file=$DATASET_DIR/$dataset \
+                    --keys_file="$DATASET_DIR/$dataset" \
                     --keys_file_type=binary \
                     --read=0.0 --insert=0.0 \
                     --update=0.0 --scan=0.0  --delete=0.0 \

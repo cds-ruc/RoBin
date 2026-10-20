@@ -19,3 +19,7 @@ data) and `artifact/figures/results/` (your runs); Table 1 in `artifact/SUMMARY.
 Table 1's DyTIS cells for Linear and Face come from runs killed at run.py's
 30-minute limit (keys inserted before the limit / elapsed time), so they are not
 in the CSVs and `SUMMARY.md` marks them `timeout`.
+
+Table 1's DyTIS and DILI cells have a "your result" only after
+`--tier extended` (their extremes; many crash or time out, as in the paper) or
+`--full`; the default subset leaves them `-`.

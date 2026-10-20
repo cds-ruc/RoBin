@@ -12,7 +12,7 @@
 | full grid | `bash artifact/experiments/fig05_06_tail_latency/run.sh --full` | test_ro_lat_single_thread + test_ro_lat_multi_thread, ~37 h |
 | released data only | `bash artifact/experiments/fig05_06_tail_latency/run.sh --plots-only` | ~1 min |
 
-The 16-threaded cases (Fig. 6) run on 16 CPUs of one NUMA node, with memory
+The 16-threaded cases (Fig. 6) run on 16 physical cores of one NUMA node, with memory
 bound to the same node (the scripts set this up; see "CPU and NUMA binding" in
 [`artifact/README.md`](../../README.md)), so cross-socket latency stays out of
 the tails.
