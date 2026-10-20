@@ -42,8 +42,8 @@ bash build.sh release                     # fetches the 15 index submodules, ins
                                           # them), then builds ./build/microbench
 bash artifact/data/fetch.sh               # the datasets (five files, 8.0 GB; the cases use linear, covid,
                                           # fb-1, osm; fb only builds fb-1), checksums verified
-export numanode=0                         # NUMA node the runs bind to; the artifact scripts default to 0,
-                                          # run.py/reproduce.sh called directly need it when numactl is installed
+export numanode=0                         # NUMA node the runs bind to; run_small.sh, run_all.sh,
+                                          # experiments/*/run.sh and reproduce.sh default to 0
 ```
 
 A full clone already includes the `conf_rel` branch, and the scripts read it
@@ -72,6 +72,22 @@ submodules are needed only to build, so step 3 fetches them; cloning with
   is ALEX at ~37 GB), ~9 GB disk.
 * Recommended: ≥ 64 GB RAM, needed for `--tier extended` and the full set
   (both include SALI at ~55 GB), 2 NUMA nodes with `numactl`.
+
+**CPU and NUMA binding.** The scripts pin every case themselves; do not wrap
+them in `taskset` or `numactl`.
+* `run_cases.py` and `reproduce.sh` pass `--taskset=1-N` to `run.py` for an
+  N-thread case (N = 1 or 16).
+* With `numactl` installed, `run.py` starts microbench under
+  `numactl --cpunodebind=$numanode --membind=$numanode taskset -c <cpus>`.
+  If the requested CPUs are not on that node, it maps them onto N CPUs of the
+  node, skipping the node's first CPU, and prints `taskset 1-N -> <cpus>`.
+* Without `numactl`, run.py pins with `taskset -c 1-N` only and binds no memory.
+
+The 16-threaded cases (Fig. 4, 6, Table 2) therefore run on **one NUMA node**:
+all 16 threads and all memory on the same socket. The study measures how
+much each index fluctuates across workloads, so cross-socket memory traffic,
+which would add its own variance, is kept out. These runs do not measure
+multi-socket scaling.
 
 **What success looks like.**
 * `run_small.sh --plots-only` prints
@@ -247,9 +263,9 @@ compares them with the released measurements of the same cases.
 ## 3. Running
 
 **Subset.** `run_small.sh` runs the cases one at a time, each pinned to one
-CPU (16 CPUs for 16-thread cases) of the NUMA node its memory is bound to.
-Concurrent cases slow each other down by different amounts, so there is no
-parallel mode.
+CPU (16 CPUs for 16-thread cases) of the NUMA node its memory is bound to
+(see "CPU and NUMA binding" above). Concurrent cases slow each other down by
+different amounts, so there is no parallel mode.
 
 `artifact/lib/gen_cases.py` derives the cases from the released
 measurements. The `core` and `extended` tiers take, for every (dataset,
