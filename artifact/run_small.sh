@@ -10,7 +10,7 @@
 # Usage:
 #   bash artifact/run_small.sh                     # claims tier (~4 h)
 #   bash artifact/run_small.sh --plots-only        # released data only: verdicts + figures (~1 min)
-#   bash artifact/run_small.sh --tier figures      # also the cases Fig. 5, 6, 8 draw (~6 h)
+#   bash artifact/run_small.sh --tier figures      # after the default: the cases Fig. 5, 6, 8 draw on all datasets (~11 h)
 #   bash artifact/run_small.sh --experiments "fig09_out_of_bound fig07_space"
 #   bash artifact/run_small.sh --datasets "linear covid"
 set -euo pipefail
@@ -24,9 +24,9 @@ PLOTS_ONLY=0
 FORCE=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --tier) TIER="$2"; shift 2 ;;
-    --experiments) EXPERIMENTS="$2"; shift 2 ;;
-    --datasets) DATASETS="$2"; shift 2 ;;
+    --tier) need_value "$@"; TIER="$2"; shift 2 ;;
+    --experiments) need_value "$@"; EXPERIMENTS="$2"; shift 2 ;;
+    --datasets) need_value "$@"; DATASETS="$2"; shift 2 ;;
     --plots-only) PLOTS_ONLY=1; shift ;;
     --force) FORCE=1; shift ;;
     -h|--help) sed -n '2,15p' "$0"; exit 0 ;;

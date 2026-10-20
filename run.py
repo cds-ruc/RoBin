@@ -1,6 +1,7 @@
 import os
 import signal
 import sys
+import shlex
 import subprocess
 import argparse
 
@@ -224,10 +225,10 @@ def main():
         )
 
     # command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} {keys_path2_arg}  --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size=-1 --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --sample_round={args.sampling_round} --thread_num={args.concurrency} {partition_arg} --index={args.index} --preload_suite={args.preload_suite} --memory {oob_arg} {latency_sampling_arg}"
-    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size={args.table_size} --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index} --preload_suite={args.preload_suite} --memory --output_path={args.output_path} {oob_arg} {latency_sampling_arg}"
+    command = f"{numactl_arg} {args.taskset} ./build/microbench --keys_file=datasets/{args.dataset} --keys_file_type=binary {hardness_statistic_arg} --read=0.0 --insert=0.0 --update=0.0 --scan=0.0 --delete=0.0 --test_suite={test_suite} --operations_num=0 --table_size={args.table_size} --init_table_ratio={init_table_ratio} --del_table_ratio=0.0 --thread_num={args.concurrency} --index={args.index} --preload_suite={args.preload_suite} --memory {shlex.quote('--output_path=' + str(args.output_path))} {oob_arg} {latency_sampling_arg}"
     print(f"Running command: {command}")
     try:
-        proc = subprocess.Popen(command.split())
+        proc = subprocess.Popen(shlex.split(command))
         ret = proc.wait(timeout=1800)
         if ret != 0:
             proc.terminate()

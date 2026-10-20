@@ -121,15 +121,18 @@ def merge(fresh_csv, target, replace: set[tuple]) -> int:
         reader = csv.DictReader(handle)
         fresh_header, fresh = reader.fieldnames or [], list(reader)
     kept, header = [], fresh_header
-    if target.exists():
+    if target.exists() and target.stat().st_size:
         with target.open(newline="") as handle:
             reader = csv.DictReader(handle)
             header = reader.fieldnames or fresh_header
             kept = [row for row in reader if config_of(row) not in replace]
-    with target.open("w", newline="") as handle:
+    # write beside the target and rename: an interrupt never leaves a truncated file
+    partial = target.with_name(target.name + ".partial")
+    with partial.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=header, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(kept + fresh)
+    os.replace(partial, target)
     return len(fresh)
 
 

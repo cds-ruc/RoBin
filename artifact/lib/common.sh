@@ -36,6 +36,14 @@ test_ro_thp_single_thread_extended_oob test_ro_thp_single_thread_data_augmentati
 
 step() { printf '\n=== %s (%s) ===\n' "$1" "$(date '+%F %T')"; }
 
+# need_value OPTION VALUE... : an option that takes a value got one (call with "$@")
+need_value() {
+  if [ $# -lt 2 ] || [ -z "$2" ] || [ "${2#--}" != "$2" ]; then
+    echo "option $1 needs a value (see --help)" >&2
+    exit 1
+  fi
+}
+
 check_datasets() {
   local missing=""
   for d in linear covid fb-1 osm; do
@@ -47,8 +55,14 @@ check_datasets() {
   fi
 }
 
+# build/ must hold a finished release build: a profiling build left behind
+# (bash build.sh profiling, or a fig10_15 run killed before its rebuild trap)
+# or a debug build would change every throughput and latency measured
 ensure_release_build() {
-  if [ ! -x "$ROOT/build/microbench" ]; then
+  local cache="$ROOT/build/CMakeCache.txt"
+  if [ ! -x "$ROOT/build/microbench" ] || [ ! -r "$cache" ] \
+     || ! grep -q '^CMAKE_BUILD_TYPE:[A-Z]*=Release$' "$cache" \
+     || grep -q '^PROFILING:[A-Z]*=ON$' "$cache"; then
     step "build (release)"
     (cd "$ROOT" && bash build.sh release)
   fi
@@ -101,8 +115,9 @@ experiment_main() {
       --full) full=1; shift ;;
       --force) FORCE=1; pass+=(--force); shift ;;
       --plots-only) plots_only=1; shift ;;
-      --tier) pass+=(--tier "$2"); shift 2 ;;
+      --tier) need_value "$@"; pass+=(--tier "$2"); shift 2 ;;
       --datasets|--indexes)
+        need_value "$@"
         # shellcheck disable=SC2206
         local values=($2); pass+=("$1" "${values[@]}"); shift 2 ;;
       -h|--help)

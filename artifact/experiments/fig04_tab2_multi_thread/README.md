@@ -12,6 +12,11 @@
 | full grid | `bash artifact/experiments/fig04_tab2_multi_thread/run.sh --full` | test_ro_thp_multi_thread, ~13 h |
 | released data only | `bash artifact/experiments/fig04_tab2_multi_thread/run.sh --plots-only` | ~1 min |
 
+The 16-threaded cases run on 16 CPUs of one NUMA node, with memory bound to
+the same node (the scripts set this up; see "CPU and NUMA binding" in
+[`artifact/README.md`](../../README.md)). Cross-socket effects are excluded,
+so the fluctuation comes from the index and the workload.
+
 Results: `multi_thread_thp.csv`, `multi_thread_fail_case.log` in `artifact/results/`.
 Figures: `multi_thread_overall_thp.pdf` in `artifact/figures/paper/` (released
 data) and `artifact/figures/results/` (your runs); Table 2 in `artifact/SUMMARY.md`.

@@ -103,7 +103,7 @@ def stage_results(stage: Path) -> None:
         layout.derive_space(RESULTS)
     for name in sorted({name for names in RESULT_NOTEBOOKS.values() for name in names}):
         source = RESULTS / name
-        if source.exists():
+        if source.exists() and source.stat().st_size:
             shutil.copy2(source, stage / name)
         else:
             pd.read_csv(REFERENCE / name, nrows=0).to_csv(stage / name, index=False)

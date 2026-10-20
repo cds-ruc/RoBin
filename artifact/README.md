@@ -42,7 +42,8 @@ bash build.sh release                     # fetches the 15 index submodules, ins
                                           # them), then builds ./build/microbench
 bash artifact/data/fetch.sh               # the datasets (five files, 8.0 GB; the cases use linear, covid,
                                           # fb-1, osm; fb only builds fb-1), checksums verified
-export numanode=0                         # NUMA node to bind to; needed when numactl is installed
+export numanode=0                         # NUMA node the runs bind to; run_small.sh, run_all.sh,
+                                          # experiments/*/run.sh and reproduce.sh default to 0
 ```
 
 A full clone already includes the `conf_rel` branch, and the scripts read it
@@ -60,16 +61,33 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 | `bash artifact/run_small.sh --plots-only` | the paper's figures (Fig. 3-9, 16, 17), Tables 1-2 and the headline number of each finding, recomputed from the released measurements | ~1 min | setup steps 1-2 |
 | `bash artifact/run_small.sh` | subset: the key cases of every throughput, latency, space and mitigation claim (Fig. 3-9, 16, 17), at full scale, on your machine | ~4 h | setup steps 1-3, hardware below |
 | `bash artifact/experiments/fig10_15_root_cause/run.sh` | Section 5 root-cause figures (Fig. 10-15) from an instrumented build; not part of `run_small.sh` | ~2-3 h | setup steps 1-3, hardware below |
-| `bash artifact/run_small.sh --tier figures` | after the default subset: the cases Fig. 5, 6 and 8 need to be redrawn completely from your runs | ~6 h | setup steps 1-3, hardware below |
+| `bash artifact/run_small.sh --tier figures` | after the default subset: the reference cases (baseline, full build, bulkload 0) Fig. 5 and 6 draw and the Fig. 8 panels, on all four datasets | ~11 h | setup steps 1-3, hardware below |
 | `bash artifact/run_all.sh` | full set: every grid of the paper and the Section 5 profiling | ~1 week | setup steps 1-3, hardware below |
 | `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | setup steps 1-3, hardware below |
 
 **Hardware.**
 * Minimum: Linux x86-64, ≥ 17 logical CPUs on the NUMA node the runs bind to
   (16-thread cases use 16 of them, CPU 0 of the node is left free), ≥ 48 GB RAM
-  on that node (the largest subset case is ALEX at ~37 GB), ~9 GB disk.
-* Recommended: ≥ 64 GB RAM (the full set includes SALI at ~55 GB), 2 NUMA
-  nodes with `numactl`.
+  on that node for the default, `figures` and `core` tiers (their largest case
+  is ALEX at ~37 GB), ~9 GB disk.
+* Recommended: ≥ 64 GB RAM, needed for `--tier extended` and the full set
+  (both include SALI at ~55 GB), 2 NUMA nodes with `numactl`.
+
+**CPU and NUMA binding.** The scripts pin every case themselves; do not wrap
+them in `taskset` or `numactl`.
+* `run_cases.py` and `reproduce.sh` pass `--taskset=1-N` to `run.py` for an
+  N-thread case (N = 1 or 16).
+* With `numactl` installed, `run.py` starts microbench under
+  `numactl --cpunodebind=$numanode --membind=$numanode taskset -c <cpus>`.
+  If the requested CPUs are not on that node, it maps them onto N CPUs of the
+  node, skipping the node's first CPU, and prints `taskset 1-N -> <cpus>`.
+* Without `numactl`, run.py pins with `taskset -c 1-N` only and binds no memory.
+
+The 16-threaded cases (Fig. 4, 6, Table 2) therefore run on **one NUMA node**:
+all 16 threads and all memory on the same socket. The study measures how
+much each index fluctuates across workloads, so cross-socket memory traffic,
+which would add its own variance, is kept out. These runs do not measure
+multi-socket scaling.
 
 **What success looks like.**
 * `run_small.sh --plots-only` prints
@@ -100,6 +118,11 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 * In `--tier extended`, DyTIS, DILI and FINEdex cases recorded as `failed` or
   `timeout`. These crashes and timeouts are the paper's own result (Fig. 3/4
   captions, Table 1, Finding 6), not an artifact problem.
+* In `--tier figures`, the four ALEX-OLC `<bulkload 0>` 16-thread latency
+  cases (one per dataset) recorded as `timeout` after 30 minutes each: ALEX-OLC
+  deadlocks when it starts from an empty index. This matches the paper's
+  ALEX-OLC timeouts due to deadlocks (Section 4.2); the released data has no
+  such row either, so Fig. 6 has no bulkload-0 line for ALEX-OLC.
 * Covid/LIPP `<segmented, 2M, sorted>`, the slowest subset case, can reach
   run.py's 30-minute per-case limit on a slow machine. It is then recorded as
   `timeout`, with its finished phases kept.
@@ -240,17 +263,18 @@ compares them with the released measurements of the same cases.
 ## 3. Running
 
 **Subset.** `run_small.sh` runs the cases one at a time, each pinned to one
-CPU (16 CPUs for 16-thread cases) of the NUMA node its memory is bound to.
-Concurrent cases slow each other down by different amounts, so there is no
-parallel mode.
+CPU (16 CPUs for 16-thread cases) of the NUMA node its memory is bound to
+(see "CPU and NUMA binding" above). Concurrent cases slow each other down by
+different amounts, so there is no parallel mode.
 
 `artifact/lib/gen_cases.py` derives the cases from the released
 measurements. The `core` and `extended` tiers take, for every (dataset,
 index):
 - the baseline `<uniform, 100M, shuffled>`;
 - the full build `<full, 200M>`;
-- the argmin and argmax of the metric each figure plots: lookup throughput,
-  worst insert, 99.9th latency, space.
+- the extremes each figure plots: the best and worst lookup case, the worst
+  insert case, the worst 99.9th-latency case of lookup and of insert, and the
+  largest space case.
 
 To those it adds the one-variable sensitivity cases, the worst released
 outlier pairs, the largest augmentation gain and loss, and for Section 6:
@@ -267,18 +291,19 @@ pair. A configuration two experiments need is one case.
 
 | experiment | default (`claims`) | `--tier figures` adds | `--full` runs (reproduce.sh) |
 | --- | --- | --- | --- |
-| `fig03_tab1_single_thread` | 28 runs, ~1 h | 10 runs | `test_ro_thp_single_thread`, 62 h |
+| `fig03_tab1_single_thread` | 28 runs, ~1 h | 10 runs, ~45 min | `test_ro_thp_single_thread`, 62 h |
 | `fig04_tab2_multi_thread` | 14 runs, ~5 min | - | `test_ro_thp_multi_thread`, 13 h |
-| `fig05_06_tail_latency` | 10 runs, ~50 min | 90 runs, ~2.2 h | `test_ro_lat_{single,multi}_thread`, 37 h |
+| `fig05_06_tail_latency` | 10 runs, ~50 min | 90 runs, ~6.5 h (2 h of it the four ALEX-OLC timeouts) | `test_ro_lat_{single,multi}_thread`, 37 h |
 | `fig07_space` | 5 runs, ~10 min | - | both throughput grids, 75 h |
-| `fig08_sensitivity` | 18 runs, ~20 min | 71 runs, ~3.3 h | `test_ro_thp_single_thread`, 62 h |
-| `fig09_out_of_bound` | 9 runs, ~25 min | 2 runs | + `test_ro_thp_single_thread_extended_oob`, 4 h |
+| `fig08_sensitivity` | 18 runs, ~20 min | 71 runs, ~5 h | `test_ro_thp_single_thread`, 62 h |
+| `fig09_out_of_bound` | 9 runs, ~25 min | 2 runs, ~5 min | + `test_ro_thp_single_thread_extended_oob`, 4 h |
 | `fig10_15_root_cause` | not in `run_small.sh`: run its `run.sh`, ~2-3 h | - | same |
 | `fig16_data_augmentation` | 9 runs, ~25 min | - | + `test_ro_thp_single_thread_data_augmentation`, 25 h |
 | `fig17_reconstruction` | 14 runs, ~25 min | - | + `test_ro_thp_single_thread_extended_bulksize`, 9 h |
 
-Times are operations only, estimated from the paper's throughputs; loading
-the dataset and bulkloading come on top. Experiments share grids: e.g.
+The subset times are wall time, loading included. The `--full` times are
+operations only, estimated from the paper's throughputs; loading the dataset
+and bulkloading come on top. Experiments share grids: e.g.
 `fig09_out_of_bound --full` reuses the single-threaded grid if
 `fig03_tab1_single_thread --full` already ran it.
 
@@ -320,7 +345,8 @@ file names of the paper's figures.
 | `--mode profiling` | `artifact/results/profiling_log/` | `artifact/figures/profiling/` |
 
 Each output directory gets a `MANIFEST.md` listing what each notebook drew.
-An experiment's `run.sh` writes `MANIFEST.<experiment>.md` instead.
+An experiment's `run.sh` writes `MANIFEST.<experiment>.md` instead, except
+`fig10_15_root_cause/run.sh`, which writes `artifact/figures/profiling/MANIFEST.md`.
 
 | paper | file | notebook |
 | --- | --- | --- |
