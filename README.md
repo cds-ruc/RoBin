@@ -27,11 +27,11 @@ bash prepare.sh
 ```
 
 ### Prepare
-RoBin depends on the tbb, jemalloc and boost library. You can install them by the following command:
+RoBin depends on the tbb, mkl, jemalloc and boost libraries. You can install them by the following command:
 
 ```shell
 sudo apt update
-sudo apt install -y libtbb-dev libjemalloc-dev libboost-dev
+sudo apt install -y libtbb-dev libmkl-dev libjemalloc-dev libboost-dev
 ```
 
 If the repository is not cloned with the `--recursive` option, you can run the following command to clone the submodule:

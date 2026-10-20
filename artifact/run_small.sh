@@ -24,9 +24,9 @@ PLOTS_ONLY=0
 FORCE=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --tier) TIER="$2"; shift 2 ;;
-    --experiments) EXPERIMENTS="$2"; shift 2 ;;
-    --datasets) DATASETS="$2"; shift 2 ;;
+    --tier) need_value "$@"; TIER="$2"; shift 2 ;;
+    --experiments) need_value "$@"; EXPERIMENTS="$2"; shift 2 ;;
+    --datasets) need_value "$@"; DATASETS="$2"; shift 2 ;;
     --plots-only) PLOTS_ONLY=1; shift ;;
     --force) FORCE=1; shift ;;
     -h|--help) sed -n '2,15p' "$0"; exit 0 ;;

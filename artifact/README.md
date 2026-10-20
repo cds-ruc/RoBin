@@ -42,7 +42,8 @@ bash build.sh release                     # fetches the 15 index submodules, ins
                                           # them), then builds ./build/microbench
 bash artifact/data/fetch.sh               # the datasets (five files, 8.0 GB; the cases use linear, covid,
                                           # fb-1, osm; fb only builds fb-1), checksums verified
-export numanode=0                         # NUMA node to bind to; needed when numactl is installed
+export numanode=0                         # NUMA node the runs bind to; the artifact scripts default to 0,
+                                          # run.py/reproduce.sh called directly need it when numactl is installed
 ```
 
 A full clone already includes the `conf_rel` branch, and the scripts read it
@@ -67,9 +68,10 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 **Hardware.**
 * Minimum: Linux x86-64, ≥ 17 logical CPUs on the NUMA node the runs bind to
   (16-thread cases use 16 of them, CPU 0 of the node is left free), ≥ 48 GB RAM
-  on that node (the largest subset case is ALEX at ~37 GB), ~9 GB disk.
-* Recommended: ≥ 64 GB RAM (the full set includes SALI at ~55 GB), 2 NUMA
-  nodes with `numactl`.
+  on that node for the default, `figures` and `core` tiers (their largest case
+  is ALEX at ~37 GB), ~9 GB disk.
+* Recommended: ≥ 64 GB RAM, needed for `--tier extended` and the full set
+  (both include SALI at ~55 GB), 2 NUMA nodes with `numactl`.
 
 **What success looks like.**
 * `run_small.sh --plots-only` prints
@@ -254,8 +256,9 @@ measurements. The `core` and `extended` tiers take, for every (dataset,
 index):
 - the baseline `<uniform, 100M, shuffled>`;
 - the full build `<full, 200M>`;
-- the argmin and argmax of the metric each figure plots: lookup throughput,
-  worst insert, 99.9th latency, space.
+- the extremes each figure plots: the best and worst lookup case, the worst
+  insert case, the worst 99.9th-latency case of lookup and of insert, and the
+  largest space case.
 
 To those it adds the one-variable sensitivity cases, the worst released
 outlier pairs, the largest augmentation gain and loss, and for Section 6:
@@ -326,7 +329,8 @@ file names of the paper's figures.
 | `--mode profiling` | `artifact/results/profiling_log/` | `artifact/figures/profiling/` |
 
 Each output directory gets a `MANIFEST.md` listing what each notebook drew.
-An experiment's `run.sh` writes `MANIFEST.<experiment>.md` instead.
+An experiment's `run.sh` writes `MANIFEST.<experiment>.md` instead, except
+`fig10_15_root_cause/run.sh`, which writes `artifact/figures/profiling/MANIFEST.md`.
 
 | paper | file | notebook |
 | --- | --- | --- |
