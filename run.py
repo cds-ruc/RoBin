@@ -158,12 +158,10 @@ def main():
     args = parser.parse_args()
 
     numactl_arg = ""
-    numanode = os.getenv("numanode")
+    # NUMA node to bind to: node 0 unless numanode is set (as in reproduce.sh and the artifact scripts)
+    numanode = os.getenv("numanode") or "0"
 
     if os.path.isfile("/usr/bin/numactl"):
-        if not numanode:
-            print("Please specify the numa node to bind, e.g., export numanode=0")
-            sys.exit(1)
         print(f"binding with numa node: {numanode}")
         numactl_arg = f"numactl --cpunodebind={numanode} --membind={numanode}"
 
