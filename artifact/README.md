@@ -44,8 +44,6 @@ bash build.sh release                     # fetches the 15 index submodules, ins
                                           # them), then builds ./build/microbench
 bash artifact/data/fetch.sh               # the datasets (five files, 8.0 GB; the cases use linear, covid,
                                           # fb-1, osm; fb only builds fb-1), checksums verified
-export numanode=0                         # NUMA node the runs bind to; run_small.sh, run_all.sh,
-                                          # experiments/*/run.sh and reproduce.sh default to 0
 ```
 
 A full clone already includes the `conf_rel` branch, and the scripts read it
@@ -68,8 +66,8 @@ submodules are needed only to build, so step 3 fetches them; cloning with
 | `bash artifact/experiments/<claim>/run.sh [--full]` | one claim, subset or full grid | §3 | setup steps 1-3, hardware below |
 
 **Hardware.**
-* Minimum: Linux x86-64, ≥ 17 physical cores on the NUMA node the runs bind to
-  (16-thread cases use 16 of them, the node's first core is left free), ≥ 48 GB
+* Minimum: Linux x86-64, ≥ 16 physical cores on the NUMA node the runs bind to
+  (17 to leave the node's first core to the OS, which the runs then skip), ≥ 48 GB
   RAM on that node for the default, `figures` and `core` tiers (their largest
   case is ALEX at ~37 GB), ~9 GB disk for the subset; ~25 GB for Section 5 and
   the full set, whose profiling logs take ~16 GB.
@@ -78,7 +76,8 @@ submodules are needed only to build, so step 3 fetches them; cloning with
   (hyper-threading) off as in the paper.
 
 **CPU and NUMA binding.** The scripts pin every case themselves; do not wrap
-them in `taskset` or `numactl`.
+them in `taskset` or `numactl`. They bind to NUMA node 0; to use another
+node, set it for the run, e.g. `numanode=1 bash artifact/run_small.sh`.
 * `run_cases.py` and `reproduce.sh` pass `--taskset=1-N` to `run.py` for an
   N-thread case (N = 1 or 16).
 * With `numactl` installed, `run.py` starts microbench under
@@ -88,7 +87,7 @@ them in `taskset` or `numactl`.
   differ from the request, run.py prints `taskset 1-N -> <cpus>`.
 * Without `numactl`, run.py pins to N physical cores of the machine and binds
   no memory.
-* A node with fewer than N + 1 physical cores falls back to SMT siblings and
+* A node with fewer than N physical cores falls back to SMT siblings and
   prints a `warning:`; the 16-thread numbers then differ from the paper's.
 
 The 16-threaded cases (Fig. 4, 6, Table 2) therefore run on **one NUMA node**,
@@ -115,7 +114,7 @@ averaging N runs narrows that.
   judge a claim by its trend (§1). A
   `MISSING` line means a claim's cases ran but gave no result; rerun them.
 * Each case prints `[n/N] <case> (~eta, ~eta left)`, then
-  `ok -> <result file> (+k records)`.
+  `ok -> <result file> (+k records)` (with `--repeat N`: `+k records, mean of N runs`).
 * `artifact/results/status.json` marks each case `ok`, apart from the
   crashes and timeouts listed below.
 
@@ -417,8 +416,8 @@ always regenerated.
   `artifact/SUMMARY.md` reports 31/31 numbers within tolerance, Table 1 21/21
   and Table 2 36/36.
 * [ ] `artifact/figures/paper/` holds 11 PDFs (Fig. 3-9, 16, 17).
-* [ ] `bash artifact/run_small.sh` finishes, and `artifact/results/status.json`
-  lists every case.
+* [ ] `bash artifact/run_small.sh` finishes, `artifact/results/status.json`
+  lists every case, and its output has no `MISSING` line.
 * [ ] The trend of every experiment's `README.md` holds in
   `artifact/figures/results/` and in your result files.
 * [ ] `fig10_15_root_cause/run.sh` produces the 11 root-cause PDFs.
