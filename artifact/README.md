@@ -42,12 +42,12 @@ docker run --rm --platform linux/amd64 \
 # Redraw the released figures; no datasets or NUMA permissions needed.
 docker run --rm --platform linux/amd64 \
   -v "$PWD/docker-output:/output" \
+  -v "$PWD/docker-output/results:/opt/robin/artifact/results" \
   -v "$PWD/docker-output/figures:/opt/robin/artifact/figures" \
   robin:reproduce bash -ec 'bash artifact/run_small.sh --plots-only; cp artifact/SUMMARY.md artifact/summary.json /output/'
 
 # Run the subset and preserve measurements and figures on the host.
 docker run --rm --platform linux/amd64 --cap-add=SYS_NICE \
-  --security-opt seccomp=unconfined \
   -v "$PWD/docker-output:/output" \
   -v robin-datasets:/opt/robin/datasets \
   -v "$PWD/docker-output/results:/opt/robin/artifact/results" \
@@ -74,8 +74,8 @@ manifests. Rerunning with these same mounts reuses the saved results. Dataset
 files remain in `robin-datasets`. The image retains its bundled release binary
 and reference Git data; container-local rebuilds are discarded with `--rm`.
 
-The NUMA options allow `numactl --membind` in the existing scripts; they relax
-container isolation and should be used only for this trusted research code.
+`--cap-add=SYS_NICE` lets `numactl --membind` work under Docker's default
+seccomp profile; no seccomp override is needed.
 Do not restrict the container's CPU set: the scripts select cores using the
 host topology. The hardware requirements below still apply. ARM hosts may use
 amd64 emulation for functional checks, but not for paper performance numbers.
@@ -90,9 +90,12 @@ This creates a separate 10,000-key linear dataset, bulkloads 5,000 keys into
 ALEX, inserts the remaining keys and reads them back through `run.py`. It does
 not run the paper's fixed-size case grid and must not replace the full datasets:
 
+Do not mount `robin-datasets` or a host dataset directory for this smoke test:
+it overwrites `datasets/linear` and would truncate the verified full dataset.
+
 ```bash
 docker run --rm -i --platform linux/amd64 --cap-add=SYS_NICE \
-  --security-opt seccomp=unconfined robin:reproduce bash -e <<'SH'
+  robin:reproduce bash -e <<'SH'
 python3 - <<'PY'
 import struct
 with open('datasets/linear', 'wb') as f:
