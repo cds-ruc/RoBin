@@ -53,10 +53,11 @@ endif()
 add_executable(microbench ${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark/microbench.cpp)
 
 # 针对不同构建类型设置编译选项
+set(ROBIN_ARCH "native" CACHE STRING "CPU architecture passed to GCC -march")
 target_compile_options(microbench PRIVATE
-    $<$<CONFIG:DEBUG>:-g -Og -march=native -faligned-new>
-    $<$<CONFIG:RELEASE>:-O3 -march=native -faligned-new>
-    $<$<CONFIG:OPTI_ENHANCE>:-O3 -march=native -faligned-new -flto -funroll-all-loops>
+    $<$<CONFIG:DEBUG>:-g -Og -march=${ROBIN_ARCH} -faligned-new>
+    $<$<CONFIG:RELEASE>:-O3 -march=${ROBIN_ARCH} -faligned-new>
+    $<$<CONFIG:OPTI_ENHANCE>:-O3 -march=${ROBIN_ARCH} -faligned-new -flto -funroll-all-loops>
 )
 
 add_subdirectory(src/competitor/masstree)

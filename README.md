@@ -20,6 +20,12 @@ See our SIGMOD 2026 paper: [Understanding Robustness Issues of Updatable Learned
 
 ## Reproduce Step
 
+For a containerized environment (benchmark, plotting and profiling), see
+[Docker setup and smoke test](artifact/README.md#docker-linux-x86-64).
+Build the image locally from this checkout; no pre-published registry image is
+assumed. It targets Linux x86-64-v3; datasets are downloaded at runtime, and
+measurements, figures and AE summaries can be exported to the host.
+
 If you want to go faster, you can just run the following script to install the dependencies download the dataset and build the project:
 
 ```shell

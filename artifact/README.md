@@ -15,6 +15,118 @@ command after the clone runs from the repository root.
   runs. Nothing else in the checkout is a measurement; your runs fill
   `artifact/results/`.
 
+## Docker (Linux x86-64)
+
+The image includes a release benchmark, all index sources, the compiler and
+libraries needed to rebuild for profiling, the pinned Python plotting packages,
+and the `conf_rel` Git reference used by the existing artifact scripts. Datasets
+are downloaded at runtime, not included in the image. This is a locally built
+image; no registry download is required or provided here. Docker Engine (or
+Docker Desktop/Colima) is required. From an empty directory, clone and build
+(network access is needed for submodules, packages and `conf_rel`):
+
+```bash
+git clone https://github.com/cds-ruc/RoBin.git
+cd RoBin
+git submodule update --init --recursive
+docker build --platform linux/amd64 --build-arg BUILD_JOBS=2 -t robin:reproduce .
+docker volume create robin-datasets
+mkdir -p docker-output/{results,figures}
+
+# Download and verify the full datasets once (~8 GB).
+# A named volume preserves the dataset helper scripts bundled in the image.
+docker run --rm --platform linux/amd64 \
+  -v robin-datasets:/opt/robin/datasets \
+  robin:reproduce bash artifact/data/fetch.sh
+
+# Redraw the released figures; no datasets or NUMA permissions needed.
+docker run --rm --platform linux/amd64 \
+  -v "$PWD/docker-output:/output" \
+  -v "$PWD/docker-output/figures:/opt/robin/artifact/figures" \
+  robin:reproduce bash -ec 'bash artifact/run_small.sh --plots-only; cp artifact/SUMMARY.md artifact/summary.json /output/'
+
+# Run the subset and preserve measurements and figures on the host.
+docker run --rm --platform linux/amd64 --cap-add=SYS_NICE \
+  --security-opt seccomp=unconfined \
+  -v "$PWD/docker-output:/output" \
+  -v robin-datasets:/opt/robin/datasets \
+  -v "$PWD/docker-output/results:/opt/robin/artifact/results" \
+  -v "$PWD/docker-output/figures:/opt/robin/artifact/figures" \
+  robin:reproduce bash -ec 'bash artifact/run_small.sh; cp artifact/SUMMARY.md artifact/summary.json /output/'
+```
+
+For Section 5, replace `bash artifact/run_small.sh` inside the last command
+with `bash artifact/experiments/fig10_15_root_cause/run.sh`; for the full set,
+use `bash artifact/run_all.sh`. Keep the same mounts and NUMA options.
+Section 5 alone produces profiling logs and figures, not a new summary, so
+omit the `cp` command for that invocation. Profiling rebuilds inside the
+container and restores the release build afterwards. `BUILD_JOBS` also limits
+those rebuilds; override with `docker run -e BUILD_JOBS=4 ...` if desired. To
+reuse a host dataset directory,
+mount a copy of this repository's `datasets/` (including its helper scripts) in
+place of the named volume. Do not mount the whole checkout over `/opt/robin`,
+which would hide the image's compiled binary and Git reference.
+
+After the container exits, `docker-output/SUMMARY.md` and `summary.json` retain
+the claim verdicts and Tables 1-2; `docker-output/results/` retains measurements,
+`status.json` and profiling logs; `docker-output/figures/` retains PDFs and their
+manifests. Rerunning with these same mounts reuses the saved results. Dataset
+files remain in `robin-datasets`. The image retains its bundled release binary
+and reference Git data; container-local rebuilds are discarded with `--rm`.
+
+The NUMA options allow `numactl --membind` in the existing scripts; they relax
+container isolation and should be used only for this trusted research code.
+Do not restrict the container's CPU set: the scripts select cores using the
+host topology. The hardware requirements below still apply. ARM hosts may use
+amd64 emulation for functional checks, but not for paper performance numbers.
+The image requires an x86-64-v3 CPU (including AVX2, BMI and POPCNT, used by
+the index implementations). It compiles with `ROBIN_ARCH=x86-64-v3` rather
+than the build machine's `-march=native`; native builds keep their current
+default. This improves image portability but can change absolute throughput.
+
+### Tiny functional smoke test
+
+This creates a separate 10,000-key linear dataset, bulkloads 5,000 keys into
+ALEX, inserts the remaining keys and reads them back through `run.py`. It does
+not run the paper's fixed-size case grid and must not replace the full datasets:
+
+```bash
+docker run --rm -i --platform linux/amd64 --cap-add=SYS_NICE \
+  --security-opt seccomp=unconfined robin:reproduce bash -e <<'SH'
+python3 - <<'PY'
+import struct
+with open('datasets/linear', 'wb') as f:
+    f.write(struct.pack('<Q', 10_000))
+    f.write(struct.pack('<10000Q', *range(1, 10_001)))
+PY
+python3 run.py --index alex --dataset linear --concurrency 1 \
+  --sampling_method uniform --insert_pattern sorted --bulkload_size 5000 \
+  --dataset_size 10000 --table_size 10000 --output_path /tmp/smoke.csv
+python3 - <<'PY'
+import csv
+with open('/tmp/smoke.csv') as f:
+    rows = list(csv.DictReader(f))
+assert {row['measurement_phase'] for row in rows} == {'insert', 'lookup'}
+assert all(int(row['init_table_size']) == 5000 and float(row['throughput']) > 0
+           for row in rows)
+print('PASS: insert and lookup CSV records')
+PY
+SH
+```
+
+Expected benchmark counters: `success_insert: 5000` in the insert phase and
+`success_read: 10000` in the lookup phase.
+
+Validated through `colima ssh` on an ARM host with amd64 emulation: the release
+build and the above workload on ALEX, B+tree, LIPP and Masstree; a profiling
+rebuild with both profiling flags, the workload on ALEX and LIPP, and the
+release rebuild afterwards; `--plots-only` produced the paper PDFs and reported
+`reference claims: 31/31 within tolerance (2 informational), 0 mismatch`.
+The local verification used a temporary PyPI mirror because the default server
+timed out; the checked-in Dockerfile keeps the default package source. Full
+dataset download and the paper-scale experiments were not run in this check.
+
+
 ## At a glance
 
 **Key results.** Figures 3-17 and Tables 1-2 (Findings 1-12, Sections 5 and
@@ -29,6 +141,10 @@ and stops on an older GCC; the paper used 11.4.0), `apt` for the libraries
 `numactl`.
 
 **Setup.**
+
+Choose either the [Docker workflow](#docker-linux-x86-64) above or the native
+setup below; container users do not need to install the benchmark or Python
+dependencies on the host. Both use the same experiment entry points and data.
 
 ```bash
 # 1. clone the repository (every entry point)
@@ -411,6 +527,14 @@ binary. The paper's profiling logs were not released, so these figures are
 always regenerated.
 
 ## 6. Reviewer checklist
+
+For Docker evaluation, first build the image and run the tiny functional smoke
+test in the [Docker section](#docker-linux-x86-64). Then run the commands below
+inside the container as shown there. In the exported files, replace
+`artifact/SUMMARY.md` with `docker-output/SUMMARY.md`, `artifact/results/` with
+`docker-output/results/`, and `artifact/figures/` with `docker-output/figures/`.
+The tiny test checks functionality only; it does not satisfy the full-scale
+experiment checklist or validate paper performance on an emulated ARM host.
 
 * [ ] `bash artifact/run_small.sh --plots-only` exits 0, and
   `artifact/SUMMARY.md` reports 31/31 numbers within tolerance, Table 1 21/21
