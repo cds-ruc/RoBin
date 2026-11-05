@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 {release|debug|profiling}"
@@ -31,8 +32,8 @@ rm -rf build
 mkdir -p build
 cd build
 if [ "$PROFILING" = "true" ]; then
-    cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILING=ON -DROOT_PROFILING=ON
+    cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPROFILING=ON -DROOT_PROFILING=ON -DROBIN_ARCH="${ROBIN_ARCH:-native}"
 else
-    cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DROBIN_ARCH="${ROBIN_ARCH:-native}"
 fi
-make -j
+make -j"${BUILD_JOBS:-$(nproc)}"

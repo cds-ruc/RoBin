@@ -16,9 +16,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_CXX_FLAGS "-march=native -mtune=native -Wall -Wextra -fopenmp -ltbb -g -mcx16 -latomic -Wno-invalid-offsetof -g -W -Wall -O3 -fPIC -include ./config.h -lpthread -lm")
+set(CMAKE_CXX_FLAGS "-march=${ROBIN_ARCH} -Wall -Wextra -fopenmp -ltbb -g -mcx16 -latomic -Wno-invalid-offsetof -g -W -Wall -O3 -fPIC -include ./config.h -lpthread -lm")
 
-add_compile_options(-faligned-new -march=native -mtune=native -march=native -Wall -Wextra -fopenmp -ltbb -g -mcx16 -latomic -Wno-invalid-offsetof -g -W -Wall -O3 -fPIC  -lpthread -lm -MD -MF -MP)
+add_compile_options(-faligned-new -march=${ROBIN_ARCH} -Wall -Wextra -fopenmp -ltbb -g -mcx16 -latomic -Wno-invalid-offsetof -g -W -Wall -O3 -fPIC  -lpthread -lm -MD -MF -MP)
 
 include_directories(./src)
 
