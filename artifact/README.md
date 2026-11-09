@@ -155,14 +155,16 @@ SH
 Expected benchmark counters: `success_insert: 5000` in the insert phase and
 `success_read: 10000` in the lookup phase.
 
-Validated through `colima ssh` on an ARM host with amd64 emulation: the release
-build and the above workload on ALEX, B+tree, LIPP and Masstree; a profiling
-rebuild with both profiling flags, the workload on ALEX and LIPP, and the
-release rebuild afterwards; `--plots-only` produced the paper PDFs and reported
+Validated on an x86-64 host with two NUMA nodes (2x Xeon Gold 5220), from a
+fresh clone with the steps above and the mirror example: `docker build --no-cache`;
+the above workload on ALEX, PGM, B+tree, LIPP and Masstree; a profiling rebuild
+with both profiling flags, the workload on ALEX and LIPP, and the release
+rebuild afterwards; `--plots-only` produced the 11 paper PDFs and reported
 `reference claims: 31/31 within tolerance (2 informational), 0 mismatch`.
-The local verification used a temporary PyPI mirror because the default server
-timed out; the checked-in Dockerfile keeps the default package source. Full
-dataset download and the paper-scale experiments were not run in this check.
+With a host dataset directory mounted read-only, `fetch.sh --verify-only`
+matched all five checksums, and one full-scale case (`fig03_tab1_single_thread`,
+ALEX on covid, bound to NUMA node 0) completed. The dataset download and the
+paper-scale experiments were not run in this check.
 
 
 ## At a glance
