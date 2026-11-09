@@ -174,11 +174,12 @@ paper-scale experiments were not run in this check.
 no claim. §1 maps every key result to its experiment directory.
 
 **Software.** Linux x86-64 (developed on Ubuntu 22.04), `git`, `bash`,
-Python ≥ 3.11 with `pip`. To build and run cases also: CMake ≥ 3.14, GCC ≥
-11.4.0 as `/usr/bin/gcc` and `/usr/bin/g++` (`CMakeLists.txt` uses those paths
-and stops on an older GCC; the paper used 11.4.0), `apt` for the libraries
-`build.sh` installs, `wget` and `sha256sum` for the datasets, and optionally
-`numactl`.
+Python ≥ 3.11 with `pip`. To build and run cases also: CMake ≥ 3.14, GCC
+11.4.0 to 13 as `/usr/bin/gcc` and `/usr/bin/g++` (`CMakeLists.txt` uses those
+paths and stops on an older GCC; the paper used 11.4.0, the Docker image 13.3),
+`apt` for the libraries `build.sh` installs, `wget` and `sha256sum` for the
+datasets, and optionally `numactl`. GCC 15 fails to compile the FINEdex and
+XIndex sources; on a system with GCC 15, use the Docker image.
 
 **Setup.**
 
