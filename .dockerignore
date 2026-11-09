@@ -1,4 +1,6 @@
 **/.git
+# the index sources come from conf_rel.bundle (see Dockerfile), not the host's submodules
+src/competitor/*/src
 build
 build-*
 .agents
