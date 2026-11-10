@@ -40,6 +40,7 @@ jobs:
         path: ${{ github.workspace }}/build/microbench # Adjust the path as necessary to include the output files
 
     - name: Create Release
+      if: github.event_name == 'push'
       id: create_release
       run: |
         TAG_NAME="Robin_Release_$(date +'%Y%m%d_%H%M%S')" # Set the desired format for the tag name
@@ -49,6 +50,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish Release
+      if: github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ env.TAG_NAME }} # Use the tag name created in the previous step
@@ -59,6 +61,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Release Assets
+      if: github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ env.TAG_NAME }} # Ensure this matches the tag used in Create Release step
