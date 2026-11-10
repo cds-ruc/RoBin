@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Materialise the competitor sources when `git submodule update --init` cannot
-# reach github.com.  The `conf_rel` branch vendors the very same IndexRepo trees
-# that the submodules point at, so they can be extracted from there.
+# Materialise the competitor sources from the `conf_rel` branch, which vendors
+# the IndexRepo trees the submodules point at (ALEX and PGM without their unit
+# tests and sample data, which the benchmark does not build).  The Docker image
+# builds from these; a native checkout uses them when `git submodule update
+# --init` cannot reach github.com.
 #
 # Usage: bash artifact/lib/vendor_submodules.sh
 set -euo pipefail
